@@ -1,0 +1,16 @@
+{
+    "languageMode": "strict",
+    "aliases":{
+        "lute": "~/.lute/typedefs/0.1.0",
+        "batteries": "./ext/batteries",
+        "third_party": "./ext",
+        "std": "./ext/std",
+
+        "util": "./src/util",
+        "project": "./src/project",
+        "warmluau": "./src/defs"
+    },
+    "lint": {
+        "LocalShadow": false
+    }
+}
