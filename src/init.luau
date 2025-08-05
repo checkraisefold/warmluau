@@ -4,12 +4,12 @@
 
 local cli = require("@batteries/cli")
 local fs = require("@lute/fs")
+local fspath = require("@util/fspath")
 local luau = require("@lute/luau")
 local meta = require("@util/meta")
 local module_loader = require("@util/module_loader")
 local options = require("@self/cli/options")
 local oven = require("@self/oven")
-local path = require("@util/path")
 local project = require("@project")
 local rules = require("@self/oven/rules")
 
@@ -29,11 +29,9 @@ if parser:has("version") then
 end
 
 local function load_project(project_file: string)
-	if loaded_project then
-		return
-	end
+	if loaded_project then return end
 
-	local project_path = path.normalize(project_file)
+	local project_path = fspath.normalize(project_file)
 	assert(project_path, "invalid project file path")
 
 	local project_success, project_type = pcall(fs.type, project_path)

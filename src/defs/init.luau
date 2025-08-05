@@ -4,7 +4,7 @@ local luau = require("@lute/luau")
 export type Ast = luau.AstStatBlock
 export type Opts = { [string]: any }
 export type Rule<O = Opts?> = {
-	process: (ast: Ast, opts: O) -> Ast,
+	process: (module: string, ast: Ast, opts: O) -> Ast,
 	validate: ((opts: O) -> boolean)?,
 }
 
