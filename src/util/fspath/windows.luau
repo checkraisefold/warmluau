@@ -15,31 +15,16 @@ local BYTE = string.byte
 
 local function to_nav(path: ValidPath): Nav
 	if type(path) == "table" then return path end
-	return (
-		string.split(
-			string.gsub(string.gsub(path, SEPARATOR_MATCH, SEPARATOR), `{SEPARATOR}$`, ""),
-			SEPARATOR
-		)
-	)
+	return (string.split(string.gsub(string.gsub(path, SEPARATOR_MATCH, SEPARATOR), `{SEPARATOR}$`, ""), SEPARATOR))
 end
 
 local function from_str(path: string): Nav
-	return (
-		string.split(
-			string.gsub(string.gsub(path, SEPARATOR_MATCH, SEPARATOR), `{SEPARATOR}$`, ""),
-			SEPARATOR
-		)
-	)
+	return (string.split(string.gsub(string.gsub(path, SEPARATOR_MATCH, SEPARATOR), `{SEPARATOR}$`, ""), SEPARATOR))
 end
 
 local function clone_nav(path: ValidPath): Nav
 	if type(path) == "table" then return table.clone(path) end
-	return (
-		string.split(
-			string.gsub(string.gsub(path, SEPARATOR_MATCH, SEPARATOR), `{SEPARATOR}$`, ""),
-			SEPARATOR
-		)
-	)
+	return (string.split(string.gsub(string.gsub(path, SEPARATOR_MATCH, SEPARATOR), `{SEPARATOR}$`, ""), SEPARATOR))
 end
 
 local function to_str(path: ValidPath): string
@@ -53,16 +38,13 @@ end
 
 local function has_root(path: ValidPath): boolean
 	local str = to_str(path)
-	if
-		string.match(str, `^[a-zA-z]:{SEPARATOR_MATCH}`) or string.match(str, `^{SEPARATOR_MATCH}`)
-	then
-		return true
-	end
+	if string.match(str, `^[a-zA-z]:{SEPARATOR_MATCH}`) or string.match(str, `^{SEPARATOR_MATCH}`) then return true end
 	return false
 end
 
 local function absolute_eh(path: ValidPath): boolean
-	if string.match(to_str(path), `^[a-zA-z]:{SEPARATOR_MATCH}`) then
+	path = to_str(path)
+	if string.match(path, `^[a-zA-z]:{SEPARATOR_MATCH}`) or (string.sub(path, 1) == "~") then
 		return true --
 	end
 	return false
@@ -113,12 +95,12 @@ local function normalize(path: ValidPath): string?
 	local backnav_count = 0
 	for nav_index = nav_count, 1, -1 do
 		local component = nav[nav_index]
-		if component == NAVIGATE_HERE then continue end
-		if component == NAVIGATE_BACK then
+		if component == NAVIGATE_HERE then
+			table.remove(nav, nav_index)
+		elseif component == NAVIGATE_BACK then
 			backnav_count += 1
-			continue
-		end
-		if backnav_count > 0 then
+			table.remove(nav, nav_index)
+		elseif backnav_count > 0 then
 			backnav_count -= 1
 			table.remove(nav, nav_index)
 		end
@@ -163,7 +145,7 @@ end
 local function stem(path: ValidPath): string?
 	local filename = last(path)
 	if not filename then return nil end
-	if BYTE(filename, 1) == BYTE "." then return filename end
+	if BYTE(filename, 1) == BYTE(".") then return filename end
 	local stem = string.match(filename, "(.+)%.")
 	if stem then return stem end
 	return filename
@@ -183,10 +165,10 @@ end
 local function set_extension(path: ValidPath, to: string): string
 	local filename = last(path)
 	if not filename then return `{SEPARATOR}.{to}` end
-	local reversed_filename = string.reverse(filename)
-	local ext_stop = string.find(reversed_filename, "%.")
-	if not ext_stop then return `{filename}.{to}` end
-	local until_extension = string.reverse(string.sub(reversed_filename, ext_stop, #filename))
+	local reversed_path = string.reverse(to_str(path))
+	local ext_stop = string.find(reversed_path, "%.")
+	if not ext_stop then return `{path}.{to}` end
+	local until_extension = string.reverse(string.sub(reversed_path, ext_stop, #filename))
 	return `{until_extension}{to}`
 end
 
@@ -216,8 +198,8 @@ local api: Api = {
 	set_last = set_last,
 	stem = stem,
 	extension = extension,
-	set_extension = set_extension,
 	push = push,
+	set_extension = set_extension,
 
 	SEPARATOR = SEPARATOR,
 }
