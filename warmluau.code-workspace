@@ -14,6 +14,7 @@
     "settings": {
         "luau-lsp.fflags.enableNewSolver": true,
         "luau-lsp.fflags.enableByDefault": true,
+        "luau-lsp.fflags.sync": false,
         "luau-lsp.sourcemap.enabled": false,
         "luau-lsp.platform.type": "standard",
     },
