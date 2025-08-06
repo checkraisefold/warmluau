@@ -157,4 +157,4 @@ if preheated then
 	preheated.bake()
 end
 
-print("Done!")
+print("Ding! Fries are done")
