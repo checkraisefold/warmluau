@@ -1,9 +1,11 @@
 local filesystem = require("@lute/fs")
 local fspath = require("@util/fspath")
-local parser = require("@std/syntax/parser")
-local printer = require("@std/syntax/printer")
-local project = require("@project")
-local rules = require("@self/rules")
+
+type Failure = {
+	value: unknown,
+	trace: string,
+	full: string,
+}
 
 local oven = {}
 
@@ -11,81 +13,145 @@ export type OvenOptions = {
 	input: string,
 	output: string,
 	recursive: boolean,
-	project: project.LoadedProject,
+	should_cache: boolean,
 }
 
-local function discover_luau_files(path_str: string, recurse: boolean): { string }
-	local luau_files: { string } = {}
-	local luau_files_count = 0
+local function get_handle(root: fspath.Nav, file: fspath.Nav): filesystem.FileHandle?
+	local file_path = fspath.to_str(fspath.push(file, root))
+	if not filesystem.exists(file_path) then
+		local merged = table.clone(root)
+		local merged_count = #merged
+		for file_index = 1, #file - 1 do
+			merged_count += 1
+			merged[merged_count] = file[file_index]
+			local dir_path = fspath.to_str(merged)
+			if not filesystem.exists(dir_path) then
+				local success, err = pcall(filesystem.mkdir, dir_path)
+				if not success then
+					error(
+						`Could not ensure file {file_path} exists;`
+							.. `mkdir errored while ensuring dir {dir_path}:\n{err}`
+					) --
+				end
+			end
+		end
+	end
 
-	local entries = filesystem.listdir(path_str)
+	local success, file_handle = pcall(filesystem.open, file_path, "w+" :: "w+")
+	if not success then
+		print(`Failed to open path '{file_path}', errored while opening handle:\n{file_handle}`) --
+		return nil
+	end
+
+	return file_handle
+end
+
+local function locate_luau_files(directory_path: string, recurse: boolean): { fspath.Nav }
+	local file_positions: { fspath.Nav } = {}
+	local file_positions_count = 0
+
+	local entries = filesystem.listdir(directory_path)
 	local entries_count = #entries
 
 	local entries_index = 0
 	while entries_index < entries_count do
 		entries_index += 1
 		local entry = entries[entries_index]
-		local entry_path = fspath.to_str(fspath.push(entry.name, path_str))
 
-		local entry_type = entry.type
+		local entry_name = entry.name
+		local entry_nav = fspath.to_nav(entry_name)
 
-		if entry_type ~= "file" then
-			if entry_type == "dir" and recurse then
-				local child_entries = filesystem.listdir(entry_path)
+		if entry.type ~= "file" then
+			if entry.type == "dir" and recurse then
+				local full_dir = fspath.to_str(fspath.push(entry_nav, directory_path))
+				local child_entries = filesystem.listdir(full_dir)
 				local child_entries_count = #child_entries
+				for child_index = 1, child_entries_count do
+					local child = child_entries[child_index]
+					child.name = fspath.to_str(fspath.push(child.name, entry_nav))
+				end
 				table.move(child_entries, 1, child_entries_count, entries_count + 1, entries)
 				entries_count += child_entries_count
 			end
 			continue
-		elseif fspath.extension(entry_path) ~= "luau" then
+		elseif fspath.extension(entry_name) ~= "luau" then
 			continue
 		end
 
-		luau_files_count += 1
-		luau_files[luau_files_count] = entry_path
+		file_positions_count += 1
+		file_positions[file_positions_count] = entry_nav
 	end
 
-	return luau_files
+	return file_positions
 end
 
-function oven.bake(opts: OvenOptions)
+function oven.preheat(opts: OvenOptions): {
+	read_paths: { string },
+	read_handles: { filesystem.FileHandle },
+	write_handles: { filesystem.FileHandle },
+	bake: () -> (),
+}
 	local input_dir, output_dir = fspath.normalize(opts.input), fspath.normalize(opts.output)
-	assert(input_dir and output_dir, "input and/or output path are invalid")
+	assert(input_dir, `Oven failed to preheat; input dir '{opts.input}' could not be normalized.`)
+	assert(output_dir, `Oven failed to preheat; output dir '{opts.output}' could not be normalized.`)
+	local should_cache = opts.should_cache
 
-	for _, rule_config in opts.project.rules do
-		local rule = rule_config.rule
-		local validate = rule.validate
-		if validate then
-			if not validate(rule_config.opts) then
-				print("wtf failed to validate")
-				return
-			end
-		end
+	local input_nav = fspath.to_nav(input_dir)
+	local output_nav = fspath.to_nav(output_dir)
+
+	local src_handles: { filesystem.FileHandle } = {}
+	local dst_handles: { filesystem.FileHandle } = {}
+	local src_paths: { string } = {}
+	local count = 0
+	local output_files = locate_luau_files(output_dir, true)
+	for _, file_location in output_files do
+		local src_path = fspath.to_str(fspath.push(file_location, output_nav))
+		if filesystem.exists(src_path) then continue end
+		local dst_path = fspath.to_str(fspath.push(file_location, input_nav))
+		if filesystem.exists(dst_path) then filesystem.remove(dst_path) end
 	end
-
-	local luau_files = discover_luau_files(input_dir, opts.recursive)
-	for _, file in luau_files do
-		local contents = filesystem.readfiletostring(file)
-		local parse_success, parsed = pcall(parser.parse, contents)
-
-		if not parse_success then
-			print(`luau file at {file} failed to parse! error: {parsed}`)
+	local input_files = locate_luau_files(input_dir, opts.recursive)
+	for _, file_location in input_files do
+		local src_path = fspath.to_str(fspath.push(file_location, input_nav))
+		assert(filesystem.exists(src_path), "path does not exist")
+		local dst_path = fspath.to_str(fspath.push(file_location, output_nav))
+		if
+			should_cache
+			and filesystem.exists(dst_path)
+			and (filesystem.stat(src_path).modified_at < filesystem.stat(dst_path).modified_at)
+		then
 			continue
 		end
 
-		for _, rule_config in opts.project.rules do
-			local rule = rule_config.rule
-			rule.process(file, parsed, rule_config.opts)
+		local dst_handle = get_handle(output_nav, file_location)
+
+		if not dst_handle then continue end
+
+		local success, src_handle = pcall(filesystem.open, src_path, "r" :: "r")
+		if not success then
+			print(`Failed to open path '{src_path}', filesystem api errored:\n{src_handle}`) --
+			continue
 		end
 
-		local file_name = fspath.last(file)
-		assert(file_name, `encountered a problem while processing file path for {file}`)
-
-		local output_file = fspath.to_str(fspath.push(file_name, output_dir))
-		filesystem.writestringtofile(output_file, printer.print(parsed))
-
-		print(`processed and outputted {file} to {output_file}`)
+		count += 1
+		src_handles[count] = src_handle
+		dst_handles[count] = dst_handle
+		src_paths[count] = src_path
 	end
+
+	local function oven_bake()
+		for index = 1, count do
+			filesystem.close(src_handles[index])
+			filesystem.close(dst_handles[index])
+		end
+	end
+
+	return {
+		read_paths = table.freeze(src_paths),
+		read_handles = table.freeze(src_handles),
+		write_handles = dst_handles,
+		bake = oven_bake,
+	}
 end
 
 return oven

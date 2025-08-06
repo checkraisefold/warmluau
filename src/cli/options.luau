@@ -17,6 +17,10 @@ local function add_options(parser: cli.Parser)
 		help = "recurse into subdirectories",
 		aliases = { "r" },
 	})
+	parser:add("cached", "flag", {
+		help = "attempt to cache the build output for unmodified files",
+		aliases = { "c" },
+	})
 
 	parser:add("input", "option", {
 		help = "input directory",

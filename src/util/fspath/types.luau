@@ -16,11 +16,10 @@ export type Api = {
 	real_parent: (path: ValidPath) -> string?,
 	equal: (first: ValidPath?, second: ValidPath?) -> boolean,
 	last: (path: ValidPath) -> string?,
-	set_last: (path: ValidPath, to: string) -> string,
 	stem: (path: ValidPath) -> string?,
 	extension: (path: ValidPath) -> string?,
 	set_extension: (path: ValidPath, to: string) -> string,
-	push: (path: ValidPath, onto: ValidPath) -> ValidPath,
+	push: (path: ValidPath, onto: ValidPath) -> Nav,
 
 	SEPARATOR: string,
 }

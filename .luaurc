@@ -7,7 +7,6 @@
         "std": "./ext/std",
 
         "util": "./src/util",
-        "project": "./src/project",
         "warmluau": "./src/defs"
     },
     "lint": {

@@ -1,6 +1,7 @@
 local filesystem = require("@lute/fs")
 local fspath = require("@util/fspath")
 local json = require("@batteries/json")
+local process = require("@lute/process")
 local resolver_types = require("./types")
 
 type RequireAliases = resolver_types.RequireAliases
@@ -10,8 +11,10 @@ local function ASSERT<Value>(value: Value, message: string?)
 	error(message or "Assertion Failed!", 2)
 end
 
+local homedir_nav = fspath.to_nav(process.homedir())
+
 local cache: { [unknown]: RequireAliases } = {}
-local function get_luaurc_aliases(module_directory: string): RequireAliases
+local function aliases_under_dir(module_directory: string): RequireAliases
 	local normalized_file_directory =
 		ASSERT(fspath.normalize(module_directory), `could not normalize luaurc directory '{module_directory}'`)
 	do
@@ -44,19 +47,26 @@ local function get_luaurc_aliases(module_directory: string): RequireAliases
 		for alias, target in luaurc_aliases do
 			if all_aliases[alias] ~= nil then continue end
 
-			local full_target = ASSERT(
-				fspath.normalize(fspath.push(target, luaurc_parent)),
-				`normalizing target for alias "{alias}" failed`
-			)
+			if fspath.starts_with(target, "~") then
+				local output_nav = table.clone(homedir_nav)
+				local cloned_target = fspath.clone_nav(target)
+				table.move(cloned_target, 2, #cloned_target, #homedir_nav + 1, output_nav)
+				target = fspath.to_str(output_nav)
+			else
+				target = ASSERT(
+					fspath.normalize(fspath.push(target, luaurc_parent)),
+					`normalizing target for alias "{alias}" failed`
+				)
+			end
 
-			if not fspath.absolute_eh(full_target) then
+			if not fspath.absolute_eh(target) then
 				error(
 					`Problem registering alias "{alias}": "{target}" in luaurc "{luaurc_path}",`
 						.. ` path parent is not absolute.`
 				)
 			end
 
-			all_aliases[alias] = full_target
+			all_aliases[alias] = target
 		end
 	end
 
@@ -66,5 +76,5 @@ local function get_luaurc_aliases(module_directory: string): RequireAliases
 end
 
 return {
-	from_luaurc = get_luaurc_aliases,
+	under_dir = aliases_under_dir,
 }

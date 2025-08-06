@@ -7,11 +7,30 @@ local resolver_types = require("@self/types")
 
 type RequireAliases = resolver_types.RequireAliases
 
-local get_aliases_from_luaurc = get_aliases.from_luaurc
-
 local function ASSERT<Value>(value: Value, message: string?)
 	if value then return value end
 	error(message or "Assertion Failed!", 2)
+end
+
+local function resolve_module_path(file: string): (string, string?)
+	file = ASSERT(fspath.normalize(file), `could not normalize file's path '{file}'`)
+	local requiring_dir = ASSERT(
+		fspath.normalize(fspath.parent(file)),
+		`Problem resolving module for path '{file}'; path's parent could not be normalized.`
+	)
+
+	local filename = ASSERT(fspath.last(file), `Problem getting module for path '{file}'; No filename??`)
+
+	local init_path: string?
+	if (filename == "init.luau") or (filename == "init.lua") then
+		init_path = requiring_dir
+		requiring_dir = ASSERT(
+			fspath.normalize(fspath.parent(requiring_dir)),
+			`Problem getting module for path '{file}'; could not normalize init module directory.`
+		)
+	end
+
+	return requiring_dir, init_path
 end
 
 local resolver = {}
@@ -23,32 +42,18 @@ export type Identity = setmetatable<{
 }, typeof(metatable)>
 
 local function resolver_from_path(file: string): Identity
-	file = ASSERT(fspath.normalize(file), `could not normalize src file's path '{file}'`)
-	do
-		ASSERT(filesystem.exists(file), `Problem constructing resolver for path '{file}'; path does not exist.`)
-		ASSERT(filesystem.type(file) == "file", `Problem constructing resolver for path '{file}'; path is not a file.`)
-	end
+	ASSERT(filesystem.exists(file), `Problem constructing resolver for path '{file}'; path does not exist.`)
+	ASSERT(filesystem.type(file) == "file", `Problem constructing resolver for path '{file}'; path is not a file.`)
 
-	local requiring_dir = ASSERT(
-		fspath.normalize(fspath.parent(file)),
-		`Problem constructing resolver for path '{file}'; path's parent could not be normalized.`
-	)
+	local module_path, self_path = resolve_module_path(file)
 
-	local aliases = get_aliases_from_luaurc(requiring_dir)
+	local aliases = get_aliases.under_dir(module_path)
 
-	local filename = ASSERT(fspath.last(file), `Problem constructing resolver for path '{file}'; No filename??`)
-
-	if (filename == "init.luau") or (filename == "init.lua") then
-		aliases.self = requiring_dir --
-		requiring_dir = ASSERT(
-			fspath.normalize(fspath.parent(requiring_dir)),
-			`Problem constructing resolver for path '{file}'; could not normalize module directory.`
-		)
-	end
+	if self_path then aliases.self = self_path end
 
 	local self = setmetatable({
 		_aliases = aliases,
-		_directory = requiring_dir,
+		_directory = module_path,
 	}, metatable)
 
 	return self
@@ -126,4 +131,8 @@ function resolver.resolve_path(self: Identity, path: string): string
 	return found_file
 end
 
-return { from_path = resolver_from_path }
+return {
+	from_path = resolver_from_path,
+	get_module = resolve_module_path,
+	get_aliases = get_aliases,
+}

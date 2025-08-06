@@ -11,8 +11,6 @@ type ValidPath = types.ValidPath
 type Nav = types.Nav
 type Api = types.Api
 
-local BYTE = string.byte
-
 local function to_nav(path: ValidPath): Nav
 	if type(path) == "table" then return path end
 	return (string.split(string.gsub(string.gsub(path, SEPARATOR_MATCH, SEPARATOR), `{SEPARATOR}$`, ""), SEPARATOR))
@@ -44,7 +42,7 @@ end
 
 local function absolute_eh(path: ValidPath): boolean
 	path = to_str(path)
-	if string.match(path, `^[a-zA-z]:{SEPARATOR_MATCH}`) or (string.sub(path, 1) == "~") then
+	if string.match(path, `^[a-zA-z]:{SEPARATOR_MATCH}`) then
 		return true --
 	end
 	return false
@@ -125,56 +123,53 @@ local function equal(first: ValidPath?, second: ValidPath?): boolean
 end
 
 local function last(path: ValidPath): string?
-	local str = string.reverse(to_str(path))
-	local separator_index = string.find(str, SEPARATOR_MATCH)
-	if not separator_index then return nil end
-	local after_separator = string.sub(str, 1, separator_index - 1)
-	str = string.reverse(after_separator)
-	if str == "" then str = nil end
-	return str
-end
-
-local function set_last(path: ValidPath, to: string): string
-	local str = string.reverse(to_str(path))
-	local separator_index = string.find(str, SEPARATOR_MATCH)
-	if not separator_index then return `{SEPARATOR}{to}` end
-	local until_separator = string.reverse(string.sub(str, separator_index, #str))
-	return `{until_separator}{to}`
-end
-
-local function stem(path: ValidPath): string?
-	local filename = last(path)
-	if not filename then return nil end
-	if BYTE(filename, 1) == BYTE(".") then return filename end
-	local stem = string.match(filename, "(.+)%.")
-	if stem then return stem end
+	path = to_str(path)
+	local reversed_path = string.reverse(path)
+	local sep_location = string.find(reversed_path, SEPARATOR_MATCH)
+	if not sep_location then return path end
+	local filename = string.reverse(string.sub(reversed_path, 1, sep_location - 1))
 	return filename
 end
 
+local function stem(path: ValidPath): string?
+	path = to_str(path)
+	local reversed_path = string.reverse(path)
+	local dot_location = string.find(reversed_path, "%.")
+	if not dot_location then return nil end
+	local sep_location = string.find(reversed_path, SEPARATOR_MATCH)
+	if not sep_location then return nil end
+	if sep_location > dot_location then return nil end
+	local stem = string.reverse(string.sub(reversed_path, dot_location + 1, sep_location - 1))
+	return stem
+end
+
 local function extension(path: ValidPath): string?
-	local filename = last(path)
-	if not filename then return nil end
-	if not string.find(filename, "%.", 2) then return nil end
-	local reversed_filename = string.reverse(filename)
-	local ext_stop = string.find(reversed_filename, "%.")
-	if not ext_stop then return nil end
-	local extension = string.reverse(string.sub(reversed_filename, 1, ext_stop - 1))
+	path = to_str(path)
+	local reversed_path = string.reverse(path)
+	local dot_location = string.find(reversed_path, "%.")
+	if not dot_location then return nil end
+	local sep_location = string.find(reversed_path, SEPARATOR_MATCH)
+	if not sep_location then return nil end
+	if sep_location < dot_location then return nil end
+	local extension = string.reverse(string.sub(reversed_path, 1, dot_location - 1))
 	return extension
 end
 
 local function set_extension(path: ValidPath, to: string): string
+	path = to_str(path)
 	local filename = last(path)
-	if not filename then return `{SEPARATOR}.{to}` end
+	if not filename then return `{path}.{to}` end
+	if not string.find(filename, "%.") then return `{path}.{to}` end
 	local reversed_path = string.reverse(to_str(path))
 	local ext_stop = string.find(reversed_path, "%.")
 	if not ext_stop then return `{path}.{to}` end
-	local until_extension = string.reverse(string.sub(reversed_path, ext_stop, #filename))
+	local until_extension = string.reverse(string.sub(reversed_path, ext_stop, #reversed_path))
 	return `{until_extension}{to}`
 end
 
-local function push(path: ValidPath, onto: ValidPath): ValidPath
-	if absolute_eh(path) then return path end
+local function push(path: ValidPath, onto: ValidPath): Nav
 	local path_nav = to_nav(path)
+	if absolute_eh(path) then return path_nav end
 	local onto_nav = clone_nav(onto)
 	table.move(path_nav, 1, #path_nav, #onto_nav + 1, onto_nav)
 	return onto_nav
@@ -195,7 +190,6 @@ local api: Api = {
 	real_parent = real_parent,
 	equal = equal,
 	last = last,
-	set_last = set_last,
 	stem = stem,
 	extension = extension,
 	push = push,
