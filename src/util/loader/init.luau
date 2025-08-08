@@ -24,7 +24,9 @@ local function warmluau_require_new(api: any, requiring_path: string, result_cac
 
 	local function warmluau_require<Path>(target: Path, ...: never): unknown
 		assert(select("#", ...) == 0, "exactly 1 argument expected")
-		if typeof(target) ~= "string" then return (require)(target) end
+		if typeof(target) ~= "string" then
+			return (require)(target)
+		end
 		local nav = fspath.to_nav(target)
 		if nav[1] == "@warmluau" then
 			local second = nav[2]
@@ -50,7 +52,9 @@ local function warmluau_require_new(api: any, requiring_path: string, result_cac
 
 		do
 			local cached = result_cache[resolved_path]
-			if cached then return cached.value end
+			if cached then
+				return cached.value
+			end
 		end
 
 		local resolved_contents = filesystem.readfiletostring(resolved_path)

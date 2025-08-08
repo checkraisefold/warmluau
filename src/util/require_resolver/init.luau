@@ -8,7 +8,9 @@ local resolver_types = require("@self/types")
 type RequireAliases = resolver_types.RequireAliases
 
 local function ASSERT<Value>(value: Value, message: string?)
-	if value then return value end
+	if value then
+		return value
+	end
 	error(message or "Assertion Failed!", 2)
 end
 
@@ -49,7 +51,9 @@ local function resolver_from_path(file: string): Identity
 
 	local aliases = get_aliases.under_dir(module_path)
 
-	if self_path then aliases.self = self_path end
+	if self_path then
+		aliases.self = self_path
+	end
 
 	local self = setmetatable({
 		_aliases = aliases,

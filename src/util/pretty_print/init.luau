@@ -155,19 +155,37 @@ function pretty_print_unknown(value: unknown): string
 end
 
 function _pretty_print(value: any): string
-	if type(value) == "number" then return pretty_print_number(value) end
-	if type(value) == "string" then return pretty_print_str(value) end
-	if type(value) == "nil" then return pretty_print_nil(value) end
-	if type(value) == "boolean" then return pretty_print_bool(value) end
-	if type(value) == "vector" then return pretty_print_vector(value) end
-	if type(value) == "function" then return pretty_print_func(value :: (...any) -> ...any) end
-	if type(value) == "thread" then return pretty_print_thread(value) end
-	if type(value) == "table" then return pretty_print_tbl(value :: UnknownTbl) end
+	if type(value) == "number" then
+		return pretty_print_number(value)
+	end
+	if type(value) == "string" then
+		return pretty_print_str(value)
+	end
+	if type(value) == "nil" then
+		return pretty_print_nil(value)
+	end
+	if type(value) == "boolean" then
+		return pretty_print_bool(value)
+	end
+	if type(value) == "vector" then
+		return pretty_print_vector(value)
+	end
+	if type(value) == "function" then
+		return pretty_print_func(value :: (...any) -> ...any)
+	end
+	if type(value) == "thread" then
+		return pretty_print_thread(value)
+	end
+	if type(value) == "table" then
+		return pretty_print_tbl(value :: UnknownTbl)
+	end
 	return pretty_print_unknown(value)
 end
 
 function pretty_print_from_precision(value: any, digits_precision: number?): string
-	if not digits_precision then return _pretty_print(value) end
+	if not digits_precision then
+		return _pretty_print(value)
+	end
 
 	pretty_print_digits_precision = digits_precision
 	local output = _pretty_print(value)
@@ -177,7 +195,9 @@ function pretty_print_from_precision(value: any, digits_precision: number?): str
 end
 
 function pretty_print_from_epsilon(value: any, epsilon: number?): string
-	if not epsilon then return _pretty_print(value) end
+	if not epsilon then
+		return _pretty_print(value)
+	end
 
 	pretty_print_digits_precision = math.max(math.clamp(-math.log10(epsilon), 0, 100))
 	local output = _pretty_print(value)

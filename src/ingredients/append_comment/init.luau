@@ -9,7 +9,9 @@ type Mode = append_comment.Mode
 local function prepare_append_comment(opts: Opts): warmluau.PreparedIngredient<Opts>
 	local mode: Mode = opts.mode or "late"
 	local function process(ast: warmluau.Ast): warmluau.Ast
-		if not next(ast.statements) then return ast end
+		if not next(ast.statements) then
+			return ast
+		end
 
 		local comment_visitor = visitor.createVisitor()
 		local to_append: luau.SingleLineComment = {

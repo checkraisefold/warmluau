@@ -7,7 +7,9 @@ export type Node = {
 }
 
 local function ASSERT<Value, Message>(value: Value, message: Message?)
-	if value then return value end
+	if value then
+		return value
+	end
 	error(message, 2)
 end
 

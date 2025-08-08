@@ -64,7 +64,9 @@ else
 	local input_exists = input_dir and filesystem.exists(input_dir)
 	assert(input_exists, `bake requires an input dir that exists, got {styled(input_dir)}`)
 	local output_dir = parser:get("output")
-	if not filesystem.exists(output_dir) then filesystem.mkdir(output_dir) end
+	if not filesystem.exists(output_dir) then
+		filesystem.mkdir(output_dir)
+	end
 
 	preheated = oven.preheat({
 		project_modified = project_modified,
@@ -122,7 +124,9 @@ end
 
 local function warmluau_forwarded(): { string }
 	local forwarded = parser:forwarded()
-	if forwarded then return table.clone(forwarded) end
+	if forwarded then
+		return table.clone(forwarded)
+	end
 	forwarded = {}
 	return forwarded
 end

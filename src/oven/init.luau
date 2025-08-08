@@ -97,9 +97,13 @@ local function oven_preheat(preheat: defs.OvenPreheat): defs.Oven
 		for output_files_index = 1, #output_files do
 			local file_location = output_files[output_files_index]
 			local src_path = fspath.to_str(fspath.push(file_location, output_nav))
-			if filesystem.exists(src_path) then continue end
+			if filesystem.exists(src_path) then
+				continue
+			end
 			local dst_path = fspath.to_str(fspath.push(file_location, input_nav))
-			if filesystem.exists(dst_path) then filesystem.remove(dst_path) end
+			if filesystem.exists(dst_path) then
+				filesystem.remove(dst_path)
+			end
 		end
 	end
 
@@ -121,12 +125,16 @@ local function oven_preheat(preheat: defs.OvenPreheat): defs.Oven
 			local cached_eh = --
 				filesystem.exists(dst_path) --
 				and (src_modified < filesystem.stat(dst_path).modified_at)
-			if cached_eh then continue end
+			if cached_eh then
+				continue
+			end
 		end
 
 		local dst_handle = get_handle(output_nav, file_location)
 
-		if not dst_handle then continue end
+		if not dst_handle then
+			continue
+		end
 
 		local read_success, src_contents: string = pcall(filesystem.readfiletostring, src_path)
 		if not read_success then
@@ -180,7 +188,9 @@ local function oven_preheat(preheat: defs.OvenPreheat): defs.Oven
 	end
 
 	local function oven_bake(...: defs.Recipe | defs.PreparedIngredient): ()
-		if oven.cooking_file then error("already cooking", 2) end
+		if oven.cooking_file then
+			error("already cooking", 2)
+		end
 		bake_steps({ ... })
 		oven.cooking_file = nil
 	end

@@ -17,7 +17,9 @@ type Opts = convert_require.Opts
 type IndexingStyle = convert_require.IndexingStyle
 
 local function ASSERT<Value>(value: Value, message: string?)
-	if value then return value end
+	if value then
+		return value
+	end
 	error(message or "Assertion Failed!", 2)
 end
 
@@ -43,7 +45,9 @@ local function rojo_sourcemap_indices(
 
 	do
 		local services = rojo_sourcemap.children
-		if not services then return {} end
+		if not services then
+			return {}
+		end
 		local services_count = #services
 		for index = 1, services_count do
 			local service = services[index]
@@ -112,7 +116,9 @@ local function prepare(opts: Opts): defs.PreparedIngredient<Opts>
 	local indices = rojo_sourcemap_indices(sourcemap_parent_path, rojo_sourcemap, indexing_style)
 
 	local function process(block: defs.Ast, oven: defs.Cooking)
-		if not next(block.statements) then return block end
+		if not next(block.statements) then
+			return block
+		end
 
 		local current_file = oven.cooking_file.src_path
 
@@ -121,11 +127,17 @@ local function prepare(opts: Opts): defs.PreparedIngredient<Opts>
 
 		require_visitor.visitCall = function(node: luau.AstExprCall): boolean
 			local func = node.func
-			if (func.tag ~= "global") or (func.name.text ~= REQUIRE_GLOBAL) then return true end
+			if (func.tag ~= "global") or (func.name.text ~= REQUIRE_GLOBAL) then
+				return true
+			end
 			local arg = node.arguments[1]
-			if not arg then return true end
+			if not arg then
+				return true
+			end
 			local call_expr = arg.node
-			if call_expr.tag ~= "string" then return true end
+			if call_expr.tag ~= "string" then
+				return true
+			end
 			local resolved = resolver:resolve_path(call_expr.text)
 
 			local roblox_target = indices[resolved]
