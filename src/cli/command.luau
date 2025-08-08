@@ -64,8 +64,7 @@ else
 	local input_exists = input_dir and filesystem.exists(input_dir)
 	assert(input_exists, `bake requires an input dir that exists, got {styled(input_dir)}`)
 	local output_dir = parser:get("output")
-	local output_exists = output_dir and filesystem.exists(output_dir)
-	assert(output_exists, `bake requires an output dir that exists, got {styled(output_dir)}`)
+	if not filesystem.exists(output_dir) then filesystem.mkdir(output_dir) end
 
 	preheated = oven.preheat({
 		project_modified = project_modified,
