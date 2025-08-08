@@ -121,6 +121,13 @@ local function warmluau_oven(preheat)
 	return oven.preheat(preheat)
 end
 
+local function warmluau_forwarded(): { string }
+	local forwarded = parser:forwarded()
+	if forwarded then return table.clone(forwarded) end
+	forwarded = {}
+	return forwarded
+end
+
 local function syntax_parse(src: string): defs.Ast
 	return luau.parse(src).root
 end
@@ -130,6 +137,7 @@ local api: typeof(defs) = {
 	batch = warmluau_batch,
 	bake = warmluau_bake,
 	oven = warmluau_oven,
+	forwarded = warmluau_forwarded,
 	syntax = {
 		visitor = visitor,
 		print = printer.print,

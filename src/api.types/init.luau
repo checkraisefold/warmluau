@@ -64,6 +64,10 @@ function warmluau.oven(preheat: OvenPreheat): Oven
 	error()
 end
 
+function warmluau.forwarded(): { string }
+	error()
+end
+
 local syntax = {
 	visitor = ... :: typeof(visitor),
 }
