@@ -136,9 +136,8 @@ local function stem(path: ValidPath): string?
 	local reversed_path = string.reverse(path)
 	local dot_location = string.find(reversed_path, "%.")
 	if not dot_location then return nil end
-	local sep_location = string.find(reversed_path, SEPARATOR_MATCH)
-	if not sep_location then return nil end
-	if sep_location > dot_location then return nil end
+	local sep_location = string.find(reversed_path, SEPARATOR_MATCH) or #path
+	if sep_location < dot_location then return nil end
 	local stem = string.reverse(string.sub(reversed_path, dot_location + 1, sep_location - 1))
 	return stem
 end
@@ -149,22 +148,31 @@ local function extension(path: ValidPath): string?
 	local dot_location = string.find(reversed_path, "%.")
 	if not dot_location then return nil end
 	local sep_location = string.find(reversed_path, SEPARATOR_MATCH)
-	if not sep_location then return nil end
-	if sep_location < dot_location then return nil end
+	if sep_location and sep_location < dot_location then return nil end
 	local extension = string.reverse(string.sub(reversed_path, 1, dot_location - 1))
 	return extension
 end
 
-local function set_extension(path: ValidPath, to: string): string
+local function set_extension(path: ValidPath, to: string?): string
 	path = to_str(path)
 	local filename = last(path)
-	if not filename then return `{path}.{to}` end
-	if not string.find(filename, "%.") then return `{path}.{to}` end
+	if not filename then
+		if to then return `{path}.{to}` end
+		return path
+	end
+	if not string.find(filename, "%.") then
+		if to then return `{path}.{to}` end
+		return path
+	end
 	local reversed_path = string.reverse(to_str(path))
 	local ext_stop = string.find(reversed_path, "%.")
-	if not ext_stop then return `{path}.{to}` end
+	if not ext_stop then
+		if to then return `{path}.{to}` end
+		return path
+	end
 	local until_extension = string.reverse(string.sub(reversed_path, ext_stop, #reversed_path))
-	return `{until_extension}{to}`
+	if to then return `{until_extension}{to}` end
+	return until_extension
 end
 
 local function push(path: ValidPath, onto: ValidPath): Nav

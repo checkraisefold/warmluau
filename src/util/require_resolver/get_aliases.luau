@@ -3,6 +3,7 @@ local fspath = require("@util/fspath")
 local json = require("@batteries/json")
 local process = require("@lute/process")
 local resolver_types = require("./types")
+local styled = require("@util/pretty_print")
 
 type RequireAliases = resolver_types.RequireAliases
 
@@ -16,7 +17,7 @@ local homedir_nav = fspath.to_nav(process.homedir())
 local cache: { [unknown]: RequireAliases } = {}
 local function aliases_under_dir(module_directory: string): RequireAliases
 	local normalized_file_directory =
-		ASSERT(fspath.normalize(module_directory), `could not normalize luaurc directory '{module_directory}'`)
+		ASSERT(fspath.normalize(module_directory), `could not normalize luaurc directory {styled(module_directory)}`)
 	do
 		local cached = cache[normalized_file_directory]
 		if cached then return table.clone(cached) end

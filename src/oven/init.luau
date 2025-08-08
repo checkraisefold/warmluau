@@ -1,20 +1,12 @@
+local FAILED_OUTPUT_FILE = "return error('warmluau could not generate an output for this file');"
+
+local defs = require("@warmluau")
 local filesystem = require("@lute/fs")
 local fspath = require("@util/fspath")
+local luau = require("@lute/luau")
+local styled = require("@util/pretty_print")
 
-type Failure = {
-	value: unknown,
-	trace: string,
-	full: string,
-}
-
-local oven = {}
-
-export type OvenOptions = {
-	input: string,
-	output: string,
-	recursive: boolean,
-	should_cache: boolean,
-}
+type Process = index<defs.PreparedIngredient, "process">
 
 local function get_handle(root: fspath.Nav, file: fspath.Nav): filesystem.FileHandle?
 	local file_path = fspath.to_str(fspath.push(file, root))
@@ -28,10 +20,11 @@ local function get_handle(root: fspath.Nav, file: fspath.Nav): filesystem.FileHa
 			if not filesystem.exists(dir_path) then
 				local success, err = pcall(filesystem.mkdir, dir_path)
 				if not success then
-					error(
+					print(
 						`Could not ensure file {file_path} exists;`
 							.. `mkdir errored while ensuring dir {dir_path}:\n{err}`
 					) --
+					return nil
 				end
 			end
 		end
@@ -39,7 +32,7 @@ local function get_handle(root: fspath.Nav, file: fspath.Nav): filesystem.FileHa
 
 	local success, file_handle = pcall(filesystem.open, file_path, "w+" :: "w+")
 	if not success then
-		print(`Failed to open path '{file_path}', errored while opening handle:\n{file_handle}`) --
+		print(`Failed to open path {styled(file_path)}, errored while opening handle:\n{file_handle}`) --
 		return nil
 	end
 
@@ -85,73 +78,119 @@ local function locate_luau_files(directory_path: string, recurse: boolean): { fs
 	return file_positions
 end
 
-function oven.preheat(opts: OvenOptions): {
-	read_paths: { string },
-	read_handles: { filesystem.FileHandle },
-	write_handles: { filesystem.FileHandle },
-	bake: () -> (),
-}
-	local input_dir, output_dir = fspath.normalize(opts.input), fspath.normalize(opts.output)
-	assert(input_dir, `Oven failed to preheat; input dir '{opts.input}' could not be normalized.`)
-	assert(output_dir, `Oven failed to preheat; output dir '{opts.output}' could not be normalized.`)
-	local should_cache = opts.should_cache
+local function oven_preheat(preheat: defs.OvenPreheat): defs.Oven
+	local parse_failure_ast = luau.parse(FAILED_OUTPUT_FILE).root
+
+	local input_dir, output_dir = fspath.normalize(preheat.input), fspath.normalize(preheat.output)
+	assert(input_dir, `Oven failed to preheat; input dir {styled(preheat.input)} could not be normalized.`)
+	assert(output_dir, `Oven failed to preheat; output dir {styled(preheat.output)} could not be normalized.`)
+	local should_cache = preheat.should_cache
 
 	local input_nav = fspath.to_nav(input_dir)
 	local output_nav = fspath.to_nav(output_dir)
 
-	local src_handles: { filesystem.FileHandle } = {}
-	local dst_handles: { filesystem.FileHandle } = {}
-	local src_paths: { string } = {}
-	local count = 0
-	local output_files = locate_luau_files(output_dir, true)
-	for _, file_location in output_files do
-		local src_path = fspath.to_str(fspath.push(file_location, output_nav))
-		if filesystem.exists(src_path) then continue end
-		local dst_path = fspath.to_str(fspath.push(file_location, input_nav))
-		if filesystem.exists(dst_path) then filesystem.remove(dst_path) end
+	--[[
+	TODO: Is this really necessary?
+	]]
+	if filesystem.exists(output_dir) then
+		local output_files = locate_luau_files(output_dir, true)
+		for output_files_index = 1, #output_files do
+			local file_location = output_files[output_files_index]
+			local src_path = fspath.to_str(fspath.push(file_location, output_nav))
+			if filesystem.exists(src_path) then continue end
+			local dst_path = fspath.to_str(fspath.push(file_location, input_nav))
+			if filesystem.exists(dst_path) then filesystem.remove(dst_path) end
+		end
 	end
-	local input_files = locate_luau_files(input_dir, opts.recursive)
-	for _, file_location in input_files do
+
+	local files: { defs.File } = {}
+	local files_count = 0
+	local input_files = locate_luau_files(input_dir, preheat.recursive)
+	for input_files_index = 1, #input_files do
+		local file_location = input_files[input_files_index]
 		local src_path = fspath.to_str(fspath.push(file_location, input_nav))
 		assert(filesystem.exists(src_path), "path does not exist")
 		local dst_path = fspath.to_str(fspath.push(file_location, output_nav))
-		if
-			should_cache
-			and filesystem.exists(dst_path)
-			and (filesystem.stat(src_path).modified_at < filesystem.stat(dst_path).modified_at)
-		then
-			continue
+		if should_cache then
+			local src_modified = filesystem.stat(src_path).modified_at
+			local cached_eh = filesystem.exists(dst_path)
+				and (src_modified < filesystem.stat(dst_path).modified_at)
+				and (src_modified < preheat.project_modified)
+			if cached_eh then continue end
 		end
 
 		local dst_handle = get_handle(output_nav, file_location)
 
 		if not dst_handle then continue end
 
-		local success, src_handle = pcall(filesystem.open, src_path, "r" :: "r")
-		if not success then
-			print(`Failed to open path '{src_path}', filesystem api errored:\n{src_handle}`) --
+		local read_success, src_contents: string = pcall(filesystem.readfiletostring, src_path)
+		if not read_success then
+			print(`Failed to open path {styled(src_path)}, filesystem api errored:\n{src_contents}`)
 			continue
 		end
 
-		count += 1
-		src_handles[count] = src_handle
-		dst_handles[count] = dst_handle
-		src_paths[count] = src_path
+		local parsed: luau.AstStat
+		local parse_success, parse_result: luau.ParseResult = pcall(luau.parse, src_contents)
+		if not parse_success then
+			print(`Failed to parse path {styled(src_path)}, parser errored:\n{parsed}`)
+			parsed = parse_failure_ast
+		else
+			parsed = parse_result.root
+		end
+
+		files_count += 1
+		files[files_count] = {
+			_ast = parsed,
+			dense = files_count,
+			src_path = src_path,
+			dst_path = dst_path,
+			write_handle = dst_handle,
+		}
 	end
 
-	local function oven_bake()
-		for index = 1, count do
-			filesystem.close(src_handles[index])
-			filesystem.close(dst_handles[index])
+	local oven: defs.Oven
+
+	--[[
+	workaround for Luau typestate
+	]]
+	local function process_file(process: Process, file: defs.File)
+		assert(oven.cooking_file)
+		file._ast = process(file._ast, oven)
+	end
+
+	local function bake_steps(steps: { defs.Recipe | defs.PreparedIngredient }): ()
+		for steps_index = 1, #steps do
+			local step = steps[steps_index]
+			if step._steps then
+				bake_steps(step._steps) --
+			else
+				local process = step.process
+				for files_index = 1, files_count do
+					local file = files[files_index]
+					oven.cooking_file = file
+					process_file(process, file)
+				end
+			end
 		end
 	end
 
-	return {
-		read_paths = table.freeze(src_paths),
-		read_handles = table.freeze(src_handles),
-		write_handles = dst_handles,
+	local function oven_bake(...: defs.Recipe | defs.PreparedIngredient): ()
+		if oven.cooking_file then error("already cooking", 2) end
+		bake_steps({ ... })
+		oven.cooking_file = nil
+	end
+
+	local value: defs.Oven = {
+		cooking_file = nil :: defs.File?,
+		files = files,
+
 		bake = oven_bake,
 	}
+	oven = value
+
+	return oven
 end
 
-return oven
+return {
+	preheat = oven_preheat,
+}

@@ -10,7 +10,8 @@ local luau = require("@lute/luau")
 local process = require("@lute/process")
 local require_resolver = require("@util/require_resolver")
 local sourcemap = require("@util/sourcemap")
-local visitor = require("@std/syntax/visitor")
+local styled = require("@util/pretty_print")
+local visitor = require("@ext/std/syntax/visitor")
 
 type Opts = convert_require.Opts
 type IndexingStyle = convert_require.IndexingStyle
@@ -65,7 +66,7 @@ local function rojo_sourcemap_indices(
 				local file_path = file_paths[file_paths_index]
 				local absolute_path = ASSERT(
 					fspath.normalize(fspath.push(file_path, sourcemap_parent)),
-					`couldn't normalize path '{file_path}' from sourcemap`
+					`couldn't normalize path {styled(file_path)} from sourcemap`
 				)
 				indices[absolute_path] = node_name
 			end
@@ -95,10 +96,10 @@ local function rojo_sourcemap_indices(
 	return indices
 end
 
-local function config(opts: Opts): defs.ConfiguredIngredient<Opts>
+local function prepare(opts: Opts): defs.PreparedIngredient<Opts>
 	local sourcemap_path = fspath.to_str(fspath.push(opts.sourcemap_path, process.cwd()))
-	ASSERT(filesystem.exists(sourcemap_path), `sourcemap at '{sourcemap_path}' doesn't exist`)
-	ASSERT(filesystem.type(sourcemap_path) == "file", `sourcemap at '{sourcemap_path}' is not a file`)
+	ASSERT(filesystem.exists(sourcemap_path), `sourcemap at {styled(sourcemap_path)} doesn't exist`)
+	ASSERT(filesystem.type(sourcemap_path) == "file", `sourcemap at {styled(sourcemap_path)} is not a file`)
 	local sourcemap_parent_path =
 		ASSERT(fspath.normalize(fspath.parent(sourcemap_path)), `sourcemap's parent could not be normalized.`)
 
@@ -110,11 +111,13 @@ local function config(opts: Opts): defs.ConfiguredIngredient<Opts>
 
 	local indices = rojo_sourcemap_indices(sourcemap_parent_path, rojo_sourcemap, indexing_style)
 
-	local function process(module: string, block: defs.Ast)
+	local function process(block: defs.Ast, oven: defs.Cooking)
 		if not next(block.statements) then return block end
 
+		local current_file = oven.cooking_file.src_path
+
 		local require_visitor = visitor.createVisitor()
-		local resolver = require_resolver.from_path(module)
+		local resolver = require_resolver.from_path(current_file)
 
 		require_visitor.visitCall = function(node: luau.AstExprCall): boolean
 			local func = node.func
@@ -130,7 +133,10 @@ local function config(opts: Opts): defs.ConfiguredIngredient<Opts>
 				call_expr = luau.parseexpr(roblox_target)
 				arg.node = call_expr
 			else
-				print(`Could not resolve roblox path for '{call_expr.text}' at {module}:{func.name.position.line}:`)
+				print(
+					`Could not resolve roblox path for "{call_expr.text}"`
+						.. ` at {current_file}:{func.name.position.line}:`
+				)
 			end
 
 			return true
@@ -141,16 +147,15 @@ local function config(opts: Opts): defs.ConfiguredIngredient<Opts>
 		return block
 	end
 
-	local configured_rule: defs.ConfiguredIngredient<Opts> = {
-		id = "convert_require",
+	local prepared_ingredient: defs.PreparedIngredient<Opts> = {
 		process = process,
 	}
 
-	return configured_rule
+	return prepared_ingredient
 end
 
-local rule: defs.Ingredient<Opts> = {
-	make = config,
+local ingredient: defs.Ingredient<Opts> = {
+	prepare = prepare,
 }
 
-return rule
+return ingredient

@@ -18,7 +18,7 @@ export type Api = {
 	last: (path: ValidPath) -> string?,
 	stem: (path: ValidPath) -> string?,
 	extension: (path: ValidPath) -> string?,
-	set_extension: (path: ValidPath, to: string) -> string,
+	set_extension: (path: ValidPath, to: string?) -> string,
 	push: (path: ValidPath, onto: ValidPath) -> Nav,
 
 	SEPARATOR: string,

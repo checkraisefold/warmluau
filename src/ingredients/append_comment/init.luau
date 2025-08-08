@@ -1,16 +1,17 @@
 local append_comment = require("@warmluau/ingredients/append_comment")
-local defs = require("@warmluau/")
 local luau = require("@lute/luau")
-local visitor = require("@std/syntax/visitor")
+local visitor = require("@ext/std/syntax/visitor")
+local warmluau = require("@warmluau/")
 
 type Opts = append_comment.Opts
+type Mode = append_comment.Mode
 
-local function configure_append_comment(opts: Opts): defs.ConfiguredIngredient<Opts>
-	local function process(_, ast: defs.Ast): defs.Ast
+local function prepare_append_comment(opts: Opts): warmluau.PreparedIngredient<Opts>
+	local mode: Mode = opts.mode or "late"
+	local function process(ast: warmluau.Ast): warmluau.Ast
 		if not next(ast.statements) then return ast end
 
 		local comment_visitor = visitor.createVisitor()
-		local has_appended = false
 		local to_append: luau.SingleLineComment = {
 			tag = "comment",
 			text = opts.text,
@@ -21,9 +22,15 @@ local function configure_append_comment(opts: Opts): defs.ConfiguredIngredient<O
 		}
 
 		comment_visitor.visitToken = function(token: luau.Token<string>)
-			if not has_appended then
+			if mode == "late" then
+				table.insert(token.leadingTrivia, to_append)
+			elseif mode == "early" then
 				table.insert(token.leadingTrivia, 1, to_append)
-				has_appended = true
+			else
+				error("unreachable; exhaustive")
+			end
+			comment_visitor.visitToken = function()
+				return false
 			end
 
 			return false
@@ -33,15 +40,15 @@ local function configure_append_comment(opts: Opts): defs.ConfiguredIngredient<O
 		return ast
 	end
 
-	local configured_rule: defs.ConfiguredIngredient<Opts> = {
+	local prepared_ingredient: warmluau.PreparedIngredient<Opts> = {
 		process = process,
 	}
 
-	return configured_rule
+	return prepared_ingredient
 end
 
-local rule: defs.Ingredient<Opts> = {
-	make = configure_append_comment,
+local ingredient: warmluau.Ingredient<Opts> = {
+	prepare = prepare_append_comment,
 }
 
-return rule
+return ingredient

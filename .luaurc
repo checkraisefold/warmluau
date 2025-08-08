@@ -2,12 +2,11 @@
     "languageMode": "strict",
     "aliases":{
         "lute": "~/.lute/typedefs/0.1.0",
+        "ext": "./ext",
         "batteries": "./ext/batteries",
-        "third_party": "./ext",
-        "std": "./ext/std",
 
         "util": "./src/util",
-        "warmluau": "./src/defs"
+        "warmluau": "./src/api.types"
     },
     "lint": {
         "LocalShadow": false
