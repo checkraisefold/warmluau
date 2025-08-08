@@ -1,4 +1,4 @@
-local PREPEND = [[local require = ...;]]
+local PREPEND = [[math.randomseed(0); local require = ...;]]
 
 local filesystem = require("@lute/fs")
 local fspath = require("@util/fspath")

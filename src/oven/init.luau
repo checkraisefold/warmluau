@@ -103,6 +103,8 @@ local function oven_preheat(preheat: defs.OvenPreheat): defs.Oven
 		end
 	end
 
+	local project_modified = preheat.project_modified
+
 	local files: { defs.File } = {}
 	local files_count = 0
 	local input_files = locate_luau_files(input_dir, preheat.recursive)
@@ -113,9 +115,12 @@ local function oven_preheat(preheat: defs.OvenPreheat): defs.Oven
 		local dst_path = fspath.to_str(fspath.push(file_location, output_nav))
 		if should_cache then
 			local src_modified = filesystem.stat(src_path).modified_at
-			local cached_eh = filesystem.exists(dst_path)
+			if project_modified and project_modified > src_modified then
+				src_modified = project_modified --
+			end
+			local cached_eh = --
+				filesystem.exists(dst_path) --
 				and (src_modified < filesystem.stat(dst_path).modified_at)
-				and (src_modified < preheat.project_modified)
 			if cached_eh then continue end
 		end
 

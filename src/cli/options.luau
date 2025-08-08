@@ -19,7 +19,7 @@ local function add_options(parser: cli.Parser)
 	})
 	parser:add("cached", "flag", {
 		help = "attempt to cache the build output for unmodified files",
-		aliases = { "c" },
+		aliases = { "cache", "c" },
 	})
 
 	parser:add("input", "option", {
