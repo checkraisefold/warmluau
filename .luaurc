@@ -6,7 +6,8 @@
         "batteries": "./ext/batteries",
 
         "util": "./src/util",
-        "warmluau": "./src/api.types"
+        "warmluau": "./defs",
+        "lib": "./src"
     },
     "lint": {
         "LocalShadow": false

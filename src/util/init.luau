@@ -1,3 +1,0 @@
-local util = {}
-
-return util

@@ -2,8 +2,8 @@ local PREPEND = [[math.randomseed(0); local require = ...;]]
 
 local filesystem = require("@lute/fs")
 local fspath = require("@util/fspath")
-local ingredients = require("@lib/ingredients")
 local luau = require("@lute/luau")
+local override = require("@self/override")
 local require_resolver = require("@util/require_resolver")
 local styled = require("@util/pretty_print")
 
@@ -18,7 +18,31 @@ local function count_vararg(...: unknown): (unknown, number)
 	return output, select("#", ...)
 end
 
-local function warmluau_require_new(api: any, requiring_path: string, result_cache: ResultCache?)
+local function try_find_override(
+	path: fspath.ValidPath,
+	base: override.Identity,
+	prefix: { string }?
+): override.Identity?
+	prefix = prefix or {}
+	path = fspath.to_nav(path)
+
+	local base_path = fspath.push(base.path, prefix)
+
+	if fspath.starts_with(path, base_path) and fspath.equal(path, base_path) then
+		return base
+	end
+
+	for _, child in base.children do
+		local found = try_find_override(path, child, base_path)
+		if found then
+			return found
+		end
+	end
+
+	return nil
+end
+
+local function require_constructor(requiring_path: string, result_cache: ResultCache?, override: override.Identity?)
 	local result_cache: ResultCache = result_cache or {}
 	local resolver = require_resolver.from_path(requiring_path)
 
@@ -28,21 +52,13 @@ local function warmluau_require_new(api: any, requiring_path: string, result_cac
 			return (require)(target)
 		end
 		local nav = fspath.to_nav(target)
-		if nav[1] == "@warmluau" then
-			local second = nav[2]
-			if not second then
-				return api --
-			end
-			if second == "ingredients" then
-				local third = nav[3]
-				local found = (ingredients :: any)[third]
-				if not found then
-					error(`Could not resolve warmluau ingredient path for {styled(target)}.`)
-				else
-					return found
-				end
+
+		if override and fspath.starts_with(nav, override.path) then
+			local found = try_find_override(nav, override)
+			if not found then
+				print(`Could not resolve overrided path for {styled(found)}.`)
 			else
-				error(`Could not resolve warmluau path for {styled(target)}.`)
+				return found.value
 			end
 		elseif nav[1] == "@lute" then
 			return (require)(target)
@@ -62,7 +78,7 @@ local function warmluau_require_new(api: any, requiring_path: string, result_cac
 		local resolved_bytecode = luau.compile(resolved_contents)
 		local loaded = luau.load(resolved_bytecode, resolved_path)
 
-		local env_require = warmluau_require_new(api, resolved_path, result_cache)
+		local env_require = require_constructor(resolved_path, result_cache, override)
 
 		local output, count = count_vararg(loaded(env_require))
 
@@ -80,5 +96,6 @@ end
 
 return {
 	prepend = loader_prepend,
-	require_new = warmluau_require_new,
+	new = require_constructor,
+	override = override.new,
 }

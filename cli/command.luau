@@ -8,16 +8,16 @@ local cli = require("@batteries/cli")
 local defs = require("@warmluau/")
 local filesystem = require("@lute/fs")
 local fspath = require("@util/fspath")
-local loader = require("@util/loader")
 local luau = require("@lute/luau")
 local meta = require("@lib/meta")
-local options = require("@lib/cli/options")
+local options = require("./options")
 local oven = require("@lib/oven")
-local printer = require("@ext/std/syntax/printer")
+local printer = require("@util/syntax/printer")
 local process = require("@lute/process")
 local recipe = require("@lib/oven/recipe")
+local require_vfs = require("@lib/require_vfs")
+local requirer = require("@util/requirer")
 local styled = require("@util/pretty_print")
-local visitor = require("@ext/std/syntax/visitor")
 
 type Process = index<defs.PreparedIngredient, "process">
 
@@ -102,13 +102,10 @@ local function warmluau_batch(...: defs.Recipe | defs.PreparedIngredient): defs.
 	get_processors({ ... }, processors)
 	local processors_count = #processors
 
-	local function batch_process(block: defs.Ast, oven: defs.Cooking): defs.Ast
-		local file = oven.cooking_file
+	local function batch_process(parsed: defs.Parsley, oven: defs.Cooking): ()
 		for processors_index = 1, processors_count do
-			block = processors[processors_index](block, oven)
-			file._ast = block
+			processors[processors_index](parsed, oven)
 		end
-		return block
 	end
 
 	local prepared_ingredient: defs.PreparedIngredient = {
@@ -131,27 +128,18 @@ local function warmluau_forwarded(): { string }
 	return forwarded
 end
 
-local function syntax_parse(src: string): defs.Ast
-	return luau.parse(src).root
-end
-
 local api: typeof(defs) = {
 	recipe = warmluau_recipe,
 	batch = warmluau_batch,
 	bake = warmluau_bake,
 	oven = warmluau_oven,
 	forwarded = warmluau_forwarded,
-	syntax = {
-		visitor = visitor,
-		print = printer.print,
-		print_expr = printer.printexpr,
-		parse = syntax_parse,
-		parse_expr = luau.parseexpr,
-	},
 }
 
+require_vfs.value = api
+
 local project_file_contents = filesystem.readfiletostring(project_path)
-project_file_contents = loader.prepend(project_file_contents)
+project_file_contents = requirer.prepend(project_file_contents)
 
 local compiler_success, project_bytecode: luau.Bytecode = pcall(luau.compile, project_file_contents)
 if not compiler_success then
@@ -165,7 +153,7 @@ if not success then
 	error(`Failed to load project at {styled(project_path)}! luau.load errored:\n{styled(loaded_project)}`) --
 end
 
-local warmluau_require = loader.require_new(api, project_path)
+local warmluau_require = requirer.new(project_path, {}, require_vfs)
 
 print("Cooking...")
 
@@ -174,8 +162,7 @@ loaded_project(warmluau_require)
 if preheated then
 	for _, file in preheated.files do
 		local handle = file.write_handle
-		local block = file._ast
-		local code_output = printer.print(block)
+		local code_output = printer.printfile(file.parsed)
 		filesystem.write(handle, code_output)
 		filesystem.close(handle)
 	end

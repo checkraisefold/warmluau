@@ -1,6 +1,6 @@
 local FAILED_OUTPUT_FILE = "return error('warmluau could not generate an output for this file');"
 
-local defs = require("@warmluau")
+local defs = require("@warmluau/")
 local filesystem = require("@lute/fs")
 local fspath = require("@util/fspath")
 local luau = require("@lute/luau")
@@ -79,7 +79,7 @@ local function locate_luau_files(directory_path: string, recurse: boolean): { fs
 end
 
 local function oven_preheat(preheat: defs.OvenPreheat): defs.Oven
-	local parse_failure_ast = luau.parse(FAILED_OUTPUT_FILE).root
+	local parse_failure = luau.parse(FAILED_OUTPUT_FILE)
 
 	local input_dir, output_dir = fspath.normalize(preheat.input), fspath.normalize(preheat.output)
 	assert(input_dir, `Oven failed to preheat; input dir {styled(preheat.input)} could not be normalized.`)
@@ -142,18 +142,15 @@ local function oven_preheat(preheat: defs.OvenPreheat): defs.Oven
 			continue
 		end
 
-		local parsed: luau.AstStat
 		local parse_success, parse_result: luau.ParseResult = pcall(luau.parse, src_contents)
 		if not parse_success then
-			print(`Failed to parse path {styled(src_path)}, parser errored:\n{parsed}`)
-			parsed = parse_failure_ast
-		else
-			parsed = parse_result.root
+			print(`Failed to parse path {styled(src_path)}, parser errored:\n{parse_result}`)
+			parse_result = parse_failure
 		end
 
 		files_count += 1
 		files[files_count] = {
-			_ast = parsed,
+			parsed = parse_result,
 			dense = files_count,
 			src_path = src_path,
 			dst_path = dst_path,
@@ -168,7 +165,7 @@ local function oven_preheat(preheat: defs.OvenPreheat): defs.Oven
 	]]
 	local function process_file(process: Process, file: defs.File)
 		assert(oven.cooking_file)
-		file._ast = process(file._ast, oven)
+		process(file.parsed, oven)
 	end
 
 	local function bake_steps(steps: { defs.Recipe | defs.PreparedIngredient }): ()

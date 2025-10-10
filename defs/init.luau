@@ -1,14 +1,14 @@
 local filesystem = require("@lute/fs")
-local luau = require("@lute/luau")
-local visitor = require("@ext/std/syntax/visitor")
+local parser = require("@util/syntax/parser")
 
-export type Ast = luau.AstStatBlock
-export type AstExpr = luau.AstExpr
+export type Ast = parser.Ast
+export type AstExpr = parser.AstExpr
+export type Parsley = parser.Parsley
 
 export type LoadedProject = (require: <Path>(target: Path, ...never) -> unknown) -> ...unknown
 
 export type File = {
-	_ast: Ast,
+	read parsed: parser.Parsley,
 	read dense: number,
 	read src_path: string,
 	read dst_path: string,
@@ -20,7 +20,7 @@ export type Ingredient<Options = any> = {
 }
 
 export type PreparedIngredient<Options = any> = {
-	read process: (block: Ast, cooking: Cooking) -> Ast,
+	read process: (parsley: parser.Parsley, cooking: Cooking) -> (),
 	-- stupid hack to make this safely discriminated with Recipe
 	read _steps: nil,
 }
@@ -68,33 +68,13 @@ function warmluau.forwarded(): { string }
 	error()
 end
 
-local syntax = {
-	visitor = ... :: typeof(visitor),
-}
-warmluau.syntax = syntax
-
-function syntax.parse(src: string): Ast
-	error()
-end
-
-function syntax.parse_expr(src: string): AstExpr
-	error()
-end
-
-function syntax.print(node: Ast): string
-	error()
-end
-
-function syntax.print_expr(node: AstExpr): string
-	error()
-end
-
 local function WARMLUAU_API_FAIL()
 	error("api not implemented; did you forget to use the cli?")
 end
 
-(setmetatable)(warmluau, {
+(setmetatable :: any)(warmluau, {
 	__index = WARMLUAU_API_FAIL,
-})
+});
+(table.clear :: any)(warmluau)
 
 return warmluau
