@@ -52,7 +52,7 @@ end
 assert(filesystem.exists(project_path), `project file at {styled(project_path)} does not exist.`)
 assert(filesystem.type(project_path) == "file", `project file at {styled(project_path)} is not a file.`)
 
-local project_modified = filesystem.stat(project_path).modified_at
+local project_modified = filesystem.stat(project_path).modified
 
 local preheated: typeof(oven.preheat(...))
 

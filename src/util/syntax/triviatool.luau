@@ -8,8 +8,8 @@ type VisitorState = {
 local visitor = visitors.create() :: visitors.Create<VisitorState>
 
 local function add_token(token: luau.Token<string>): ()
-	local leading = token.leadingTrivia
-	local trailing = token.trailingTrivia
+	local leading = token.leadingtrivia
+	local trailing = token.trailingtrivia
 
 	local state = visitor.state
 	local state_leading = state.leading
@@ -52,19 +52,19 @@ local function append(trivia: { luau.Trivia }, onto: { luau.Trivia }): { luau.Tr
 end
 
 local function push_lead<T>(trivia: { luau.Trivia }, token)
-	return push(trivia, token.leadingTrivia)
+	return push(trivia, token.leadingtrivia)
 end
 
 local function append_lead<T>(trivia: { luau.Trivia }, token)
-	return append(trivia, token.leadingTrivia)
+	return append(trivia, token.leadingtrivia)
 end
 
 local function push_trail<T>(trivia: { luau.Trivia }, token)
-	return push(trivia, token.trailingTrivia)
+	return push(trivia, token.trailingtrivia)
 end
 
 local function append_trail<T>(trivia: { luau.Trivia }, token)
-	return append(trivia, token.trailingTrivia)
+	return append(trivia, token.trailingtrivia)
 end
 
 return {

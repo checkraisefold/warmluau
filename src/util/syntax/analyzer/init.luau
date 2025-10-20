@@ -467,7 +467,7 @@ function analyzer.evaluate(self: Identity, node: luau.AstExpr): Constant
 		return CACHE(self, node, self:evaluate_indexname(node))
 	elseif node.tag == "index" then
 		return CACHE(self, node, self:evaluate_indexexpr(node))
-	elseif (node.tag == "local") then
+	elseif node.tag == "local" then
 		local tracked = self.tracked.locals[node["local"]]
 		if tracked then
 			local init = tracked.init
@@ -520,27 +520,27 @@ end
 local function value_to_expression(value: ConstantData): luau.AstExpr
 	if type(value) == "boolean" then
 		local output: luau.AstExprConstantBool = {
-			leadingTrivia = {},
+			leadingtrivia = {},
 			position = {
 				line = 0,
 				column = 0,
 			},
 			text = if value then "true" else "false",
 			value = value,
-			trailingTrivia = {},
+			trailingtrivia = {},
 			tag = "boolean",
 		}
 		return output
 	elseif type(value) == "number" then
 		local output: luau.AstExprConstantNumber = {
-			leadingTrivia = {},
+			leadingtrivia = {},
 			position = {
 				line = 0,
 				column = 0,
 			},
 			text = tostring(value),
 			value = value,
-			trailingTrivia = {},
+			trailingtrivia = {},
 			tag = "number",
 		}
 		return output
@@ -556,27 +556,27 @@ local function value_to_expression(value: ConstantData): luau.AstExpr
 		end
 	elseif type(value) == "string" then
 		local output: luau.AstExprConstantString = {
-			leadingTrivia = {},
+			leadingtrivia = {},
 			position = {
 				line = 0,
 				column = 0,
 			},
 			text = value,
-			trailingTrivia = {},
+			trailingtrivia = {},
 			tag = "string",
-			quoteStyle = "single",
-			blockDepth = 0,
+			quotestyle = "single",
+			blockdepth = 0,
 		}
 		return output
 	elseif type(value) == "nil" then
 		local output: luau.AstExprConstantNil = {
-			leadingTrivia = {},
+			leadingtrivia = {},
 			position = {
 				line = 0,
 				column = 0,
 			},
 			text = "nil",
-			trailingTrivia = {},
+			trailingtrivia = {},
 			tag = "nil",
 		}
 		return output

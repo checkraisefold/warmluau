@@ -109,9 +109,9 @@ function value_visitor.vfor(node)
 end
 
 function value_visitor.vfor_in(node)
-	visitors.inner_visit_token(node.forKeyword)
+	visitors.inner_visit_token(node.forkeyword)
 	visitors.inner_visit_punctuated(node.variables, visitors.inner_visit_local)
-	visitors.inner_visit_token(node.inKeyword)
+	visitors.inner_visit_token(node.inkeyword)
 	for _, value in node.values do
 		local evaluated = try_eval(value.node)
 		if evaluated then
@@ -119,7 +119,7 @@ function value_visitor.vfor_in(node)
 		end
 	end
 	visitors.inner_visit_block(node.body)
-	visitors.inner_visit_token(node.endKeyword)
+	visitors.inner_visit_token(node.endkeyword)
 	return false
 end
 
@@ -214,24 +214,24 @@ function value_visitor.vindex_name(node)
 		if evaluated then
 			local group: luau.AstExprGroup = {
 				tag = "group",
-				openParens = {
-					leadingTrivia = {},
+				openparens = {
+					leadingtrivia = {},
 					position = {
 						column = 0,
 						line = 0,
 					},
 					text = "(",
-					trailingTrivia = {},
+					trailingtrivia = {},
 				},
 				expression = evaluated,
-				closeParens = {
-					leadingTrivia = {},
+				closeparens = {
+					leadingtrivia = {},
 					position = {
 						column = 0,
 						line = 0,
 					},
 					text = ")",
-					trailingTrivia = {},
+					trailingtrivia = {},
 				},
 			}
 			node.expression = group

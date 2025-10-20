@@ -44,7 +44,7 @@ local visitor = visitors.add_scope(visitors.base() :: visitors.Base<VisitorState
 
 function visitor.scope_open()
 	local state = visitor.state
-	INSERT(state.scopes, {})
+	INSERT(state.scopes, {} :: Scope)
 end
 function visitor.scope_close()
 	local state = visitor.state
@@ -56,7 +56,6 @@ function visitor.scope_close()
 end
 
 local function scope_insert_local(identifier: luau.AstLocal, assignment: luau.AstExpr?): ()
-	print("hi")
 	local state = visitor.state
 	local scopes = state.scopes
 	local scope = ASSERT(
@@ -92,18 +91,18 @@ function visitor.vassign(node)
 			local variable
 			for scopes_index = scopes_count, 1, -1 do
 				variable = scopes[scopes_index][name]
-				if variable then break end
+				if variable then
+					break
+				end
 			end
 
 			if variable then
 				variable.writes += 1
 			else
-				error(
-					`Internal Error;\z 
+				error(`Internal Error;\z 
 					Value tracker tried to reassign local '{name}',\z 
 					but a value for '{name}' did not exist given the\z 
-					current scope.`
-				)
+					current scope.`)
 			end
 		elseif assignee.tag == "global" then
 			ensure_global(state, assignee.name.text).writes += 1
@@ -130,18 +129,18 @@ local function local_tracked_variable(node: luau.AstLocal): Variable
 	local variable
 	for scopes_index = scopes_count, 1, -1 do
 		variable = scopes[scopes_index][name]
-		if variable then break end
+		if variable then
+			break
+		end
 	end
 
 	if variable then
 		return variable
 	else
-		error(
-			`Internal Error;\z 
+		error(`Internal Error;\z 
 			Value tracker tried to reference local '{name}',\z 
 			but a value for '{name}' did not exist given the\z 
-			current scope.`
-		)
+			current scope.`)
 	end
 end
 

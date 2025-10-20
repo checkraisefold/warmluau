@@ -14,13 +14,13 @@ local function cglobal(text: string): luau.AstExprGlobal
 	return {
 		tag = "global",
 		name = {
-			leadingTrivia = {},
+			leadingtrivia = {},
 			position = {
 				line = 0,
 				column = 0,
 			},
 			text = text,
-			trailingTrivia = {},
+			trailingtrivia = {},
 		},
 	}
 end

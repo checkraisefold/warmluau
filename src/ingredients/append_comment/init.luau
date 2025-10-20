@@ -32,9 +32,9 @@ local function prepare_append_comment(opts: Opts): warmluau.PreparedIngredient<O
 		end
 		visitor.state = true
 		if mode == "late" then
-			INSERT(token.leadingTrivia, comment())
+			INSERT(token.leadingtrivia, comment())
 		elseif mode == "early" then
-			table.insert(token.leadingTrivia, 1, comment())
+			table.insert(token.leadingtrivia, 1, comment())
 		else
 			error("unreachable; exhaustive")
 		end

@@ -49,23 +49,23 @@ export type OvenPreheat = {
 local warmluau = {}
 
 function warmluau.recipe(...: Recipe | PreparedIngredient): Recipe
-	error()
+	error("unimplemented")
 end
 
 function warmluau.batch(...: Recipe | PreparedIngredient): PreparedIngredient
-	error()
+	error("unimplemented")
 end
 
 function warmluau.bake(...: Recipe | PreparedIngredient): ()
-	error()
+	error("unimplemented")
 end
 
 function warmluau.oven(preheat: OvenPreheat): Oven
-	error()
+	error("unimplemented")
 end
 
 function warmluau.forwarded(): { string }
-	error()
+	error("unimplemented")
 end
 
 local function WARMLUAU_API_FAIL()

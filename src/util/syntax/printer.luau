@@ -25,26 +25,26 @@ local function print_trivia_list(trivia: { luau.Trivia })
 end
 
 local function print_token(node: luau.Token): string
-	return print_trivia_list(node.leadingTrivia) .. node.text .. print_trivia_list(node.trailingTrivia)
+	return print_trivia_list(node.leadingtrivia) .. node.text .. print_trivia_list(node.trailingtrivia)
 end
 
 local function print_string(node: luau.AstExprConstantString | luau.AstTypeSingletonString): string
-	local result = print_trivia_list(node.leadingTrivia)
+	local result = print_trivia_list(node.leadingtrivia)
 
-	if node.quoteStyle == "single" then
+	if node.quotestyle == "single" then
 		result ..= `'{node.text}'`
-	elseif node.quoteStyle == "double" then
+	elseif node.quotestyle == "double" then
 		result ..= `"{node.text}"`
-	elseif node.quoteStyle == "block" then
-		local equals = string.rep("=", node.blockDepth)
+	elseif node.quotestyle == "block" then
+		local equals = string.rep("=", node.blockdepth)
 		result ..= `[{equals}[{node.text}]{equals}]`
-	elseif node.quoteStyle == "interp" then
+	elseif node.quotestyle == "interp" then
 		result ..= "`" .. node.text .. "`"
 	else
-		return exhaustive_match(node.quoteStyle)
+		return exhaustive_match(node.quotestyle)
 	end
 
-	result ..= print_trivia_list(node.trailingTrivia)
+	result ..= print_trivia_list(node.trailingtrivia)
 	return result
 end
 
@@ -52,7 +52,7 @@ local function print_interpolated_string(expr: luau.AstExprInterpString): string
 	local result = ""
 
 	for i = 1, #expr.strings do
-		result ..= print_trivia_list(expr.strings[i].leadingTrivia)
+		result ..= print_trivia_list(expr.strings[i].leadingtrivia)
 		if i == 1 then
 			result ..= "`"
 		else
@@ -62,10 +62,10 @@ local function print_interpolated_string(expr: luau.AstExprInterpString): string
 
 		if i == #expr.strings then
 			result ..= "`"
-			result ..= print_trivia_list(expr.strings[i].trailingTrivia)
+			result ..= print_trivia_list(expr.strings[i].trailingtrivia)
 		else
 			result ..= "{"
-			result ..= print_trivia_list(expr.strings[i].trailingTrivia)
+			result ..= print_trivia_list(expr.strings[i].trailingtrivia)
 			result ..= print_expr(expr.expressions[i])
 		end
 	end
@@ -105,7 +105,7 @@ visitor.vstring = function(node: luau.AstExprConstantString)
 	return false
 end
 
-visitor.type.vstring = function(node: luau.AstTypeSingletonString)
+visitor.type_vstring = function(node: luau.AstTypeSingletonString)
 	write(print_string(node))
 	return false
 end

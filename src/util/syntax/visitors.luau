@@ -163,34 +163,34 @@ local function visit_if(node: luau.AstStatIf)
 	if not v.vif(node) then
 		return
 	end
-	visit_token(node.ifKeyword)
+	visit_token(node.ifkeyword)
 	visit_expression(node.condition)
-	visit_token(node.thenKeyword)
+	visit_token(node.thenkeyword)
 	visit_block(node.consequent)
 	for _, elseif_node in node.elseifs do
-		visit_token(elseif_node.elseifKeyword)
+		visit_token(elseif_node.elseifkeyword)
 		visit_expression(elseif_node.condition)
-		visit_token(elseif_node.thenKeyword)
+		visit_token(elseif_node.thenkeyword)
 		visit_block(elseif_node.consequent)
 	end
-	if node.elseKeyword then
-		visit_token(node.elseKeyword)
+	if node.elsekeyword then
+		visit_token(node.elsekeyword)
 	end
 	if node.antecedent then
 		visit_block(node.antecedent)
 	end
-	visit_token(node.endKeyword)
+	visit_token(node.endkeyword)
 end
 
 local function visit_while(node: luau.AstStatWhile)
 	if not v.vwhile(node) then
 		return
 	end
-	visit_token(node.whileKeyword)
+	visit_token(node.whilekeyword)
 	visit_expression(node.condition)
-	visit_token(node.doKeyword)
+	visit_token(node.dokeyword)
 	visit_block(node.body)
-	visit_token(node.endKeyword)
+	visit_token(node.endkeyword)
 end
 
 local function visit_repeat(node: luau.AstStatRepeat)
@@ -207,7 +207,7 @@ local function visit_return(node: luau.AstStatReturn)
 	if not v.vreturn(node) then
 		return
 	end
-	visit_token(node.returnKeyword)
+	visit_token(node.returnkeyword)
 	visit_punctuated(node.expressions, visit_expression)
 end
 
@@ -215,7 +215,7 @@ local function visit_local_statement(node: luau.AstStatLocal)
 	if not v.vlocal_declaration(node) then
 		return
 	end
-	visit_token(node.localKeyword)
+	visit_token(node.localkeyword)
 	visit_punctuated(node.variables, visit_local)
 	if node.equals then
 		visit_token(node.equals)
@@ -234,19 +234,19 @@ local function visit_for(node: luau.AstStatFor)
 	if not v.vfor(node) then
 		return
 	end
-	visit_token(node.forKeyword)
+	visit_token(node.forkeyword)
 	visit_local(node.variable)
 	visit_token(node.equals)
 	visit_expression(node.from)
-	visit_token(node.toComma)
+	visit_token(node.tocomma)
 	visit_expression(node.to)
-	if node.stepComma then
-		visit_token(node.stepComma)
+	if node.stepcomma then
+		visit_token(node.stepcomma)
 	end
 	if node.step then
 		visit_expression(node.step)
 	end
-	visit_token(node.doKeyword)
+	visit_token(node.dokeyword)
 	if not vscope then
 		visit_block(node.body)
 	else
@@ -259,18 +259,18 @@ local function visit_for(node: luau.AstStatFor)
 			vscope.scope_close()
 		end
 	end
-	visit_token(node.endKeyword)
+	visit_token(node.endkeyword)
 end
 
 local function visit_for_in(node: luau.AstStatForIn)
 	if not v.vfor_in(node) then
 		return
 	end
-	visit_token(node.forKeyword)
+	visit_token(node.forkeyword)
 	visit_punctuated(node.variables, visit_local)
-	visit_token(node.inKeyword)
+	visit_token(node.inkeyword)
 	visit_punctuated(node.values, visit_expression)
-	visit_token(node.doKeyword)
+	visit_token(node.dokeyword)
 	if not vscope then
 		visit_block(node.body)
 	else
@@ -285,7 +285,7 @@ local function visit_for_in(node: luau.AstStatForIn)
 			vscope.scope_close()
 		end
 	end
-	visit_token(node.endKeyword)
+	visit_token(node.endkeyword)
 end
 
 local function visit_assign(node: luau.AstStatAssign)
@@ -338,17 +338,17 @@ local function visit_type_alias(node: luau.AstStatTypeAlias)
 	end
 	visit_token(node.typeToken)
 	visit_token(node.name)
-	if node.openGenerics then
-		visit_token(node.openGenerics)
+	if node.opengenerics then
+		visit_token(node.opengenerics)
 	end
 	if node.generics then
 		visit_punctuated(node.generics, visit_generic)
 	end
-	if node.genericPacks then
-		visit_punctuated(node.genericPacks, visit_generic_pack)
+	if node.genericpacks then
+		visit_punctuated(node.genericpacks, visit_generic_pack)
 	end
-	if node.closeGenerics then
-		visit_token(node.closeGenerics)
+	if node.closegenerics then
+		visit_token(node.closegenerics)
 	end
 	visit_token(node.equals)
 	visit_type(node.type)
@@ -408,12 +408,12 @@ local function visit_call(node: luau.AstExprCall)
 		return
 	end
 	visit_expression(node.func)
-	if node.openParens then
-		visit_token(node.openParens)
+	if node.openparens then
+		visit_token(node.openparens)
 	end
 	visit_punctuated(node.arguments, visit_expression)
-	if node.closeParens then
-		visit_token(node.closeParens)
+	if node.closeparens then
+		visit_token(node.closeparens)
 	end
 end
 
@@ -442,36 +442,36 @@ local function visit_function_body(node: luau.AstFunctionBody, local_fun: luau.A
 		end
 		return
 	end
-	if node.openGenerics then
-		visit_token(node.openGenerics)
+	if node.opengenerics then
+		visit_token(node.opengenerics)
 	end
 	if node.generics then
 		visit_punctuated(node.generics, visit_generic)
 	end
-	if node.genericPacks then
-		visit_punctuated(node.genericPacks, visit_generic_pack)
+	if node.genericpacks then
+		visit_punctuated(node.genericpacks, visit_generic_pack)
 	end
-	if node.closeGenerics then
-		visit_token(node.closeGenerics)
+	if node.closegenerics then
+		visit_token(node.closegenerics)
 	end
-	visit_token(node.openParens)
+	visit_token(node.openparens)
 	local parameters = node.parameters
 	visit_punctuated(parameters, visit_local)
 	if node.vararg then
 		visit_token(node.vararg)
 	end
-	if node.varargColon then
-		visit_token(node.varargColon)
+	if node.varargcolon then
+		visit_token(node.varargcolon)
 	end
-	if node.varargAnnotation then
-		visit_type_pack(node.varargAnnotation)
+	if node.varargannotation then
+		visit_type_pack(node.varargannotation)
 	end
-	visit_token(node.closeParens)
-	if node.returnSpecifier then
-		visit_token(node.returnSpecifier)
+	visit_token(node.closeparens)
+	if node.returnspecifier then
+		visit_token(node.returnspecifier)
 	end
-	if node.returnAnnotation then
-		visit_type_pack(node.returnAnnotation)
+	if node.returnannotation then
+		visit_type_pack(node.returnannotation)
 	end
 
 	if not vscope then
@@ -495,7 +495,7 @@ local function visit_function_body(node: luau.AstFunctionBody, local_fun: luau.A
 			vscope.scope_close()
 		end
 	end
-	visit_token(node.endKeyword)
+	visit_token(node.endkeyword)
 end
 
 local function visit_attribute(node: luau.AstAttribute)
@@ -509,7 +509,7 @@ local function visit_anonymous_function(node: luau.AstExprAnonymousFunction)
 	for _, attribute in node.attributes do
 		visit_attribute(attribute)
 	end
-	visit_token(node.functionKeyword)
+	visit_token(node.functionkeyword)
 	visit_function_body(node.body)
 end
 
@@ -520,7 +520,7 @@ local function visit_function(node: luau.AstStatFunction)
 	for _, attribute in node.attributes do
 		visit_attribute(attribute)
 	end
-	visit_token(node.functionKeyword)
+	visit_token(node.functionkeyword)
 	visit_expression(node.name)
 	visit_function_body(node.body)
 end
@@ -532,8 +532,8 @@ local function visit_local_function(node: luau.AstStatLocalFunction)
 	for _, attribute in node.attributes do
 		visit_attribute(attribute)
 	end
-	visit_token(node.localKeyword)
-	visit_token(node.functionKeyword)
+	visit_token(node.localkeyword)
+	visit_token(node.functionkeyword)
 	visit_local(node.name)
 	if vscope then
 		vscope.scope_insert_local_function(node)
@@ -549,7 +549,7 @@ local function visit_stat_type_function(node: luau.AstStatTypeFunction)
 		visit_token(node.export)
 	end
 	visit_token(node.type)
-	visit_token(node.functionKeyword)
+	visit_token(node.functionkeyword)
 	visit_token(node.name)
 	visit_function_body(node.body)
 end
@@ -565,9 +565,9 @@ local function visit_table_item(node: luau.AstExprTableItem)
 		visit_token(node.equals)
 		visit_expression(node.value)
 	elseif node.kind == "general" then
-		visit_token(node.indexerOpen)
+		visit_token(node.indexeropen)
 		visit_expression(node.key)
-		visit_token(node.indexerClose)
+		visit_token(node.indexerclose)
 		visit_token(node.equals)
 		visit_expression(node.value)
 	else
@@ -583,11 +583,11 @@ local function visit_table(node: luau.AstExprTable)
 	if not v.vtable(node) then
 		return
 	end
-	visit_token(node.openBrace)
+	visit_token(node.openbrace)
 	for _, item in node.entries do
 		visit_table_item(item)
 	end
-	visit_token(node.closeBrace)
+	visit_token(node.closebrace)
 end
 
 local function visit_index_name(node: luau.AstExprIndexName)
@@ -604,18 +604,18 @@ local function visit_index_expr(node: luau.AstExprIndexExpr)
 		return
 	end
 	visit_expression(node.expression)
-	visit_token(node.openBrackets)
+	visit_token(node.openbrackets)
 	visit_expression(node.index)
-	visit_token(node.closeBrackets)
+	visit_token(node.closebrackets)
 end
 
 local function visit_group(node: luau.AstExprGroup)
 	if not v.vgroup(node) then
 		return
 	end
-	visit_token(node.openParens)
+	visit_token(node.openparens)
 	visit_expression(node.expression)
-	visit_token(node.closeParens)
+	visit_token(node.closeparens)
 end
 
 local function visit_interpolated_string(node: luau.AstExprInterpString)
@@ -643,17 +643,17 @@ local function visit_if_expression(node: luau.AstExprIfElse)
 	if not v.vif_expression(node) then
 		return
 	end
-	visit_token(node.ifKeyword)
+	visit_token(node.ifkeyword)
 	visit_expression(node.condition)
-	visit_token(node.thenKeyword)
+	visit_token(node.thenkeyword)
 	visit_expression(node.consequent)
 	for _, elseifs in node.elseifs do
-		visit_token(elseifs.elseifKeyword)
+		visit_token(elseifs.elseifkeyword)
 		visit_expression(elseifs.condition)
-		visit_token(elseifs.thenKeyword)
+		visit_token(elseifs.thenkeyword)
 		visit_expression(elseifs.consequent)
 	end
-	visit_token(node.elseKeyword)
+	visit_token(node.elsekeyword)
 	visit_expression(node.antecedent)
 end
 
@@ -670,18 +670,18 @@ local function visit_type_reference(node: luau.AstTypeReference)
 		if node.prefix then
 			visit_token(node.prefix)
 		end
-		if node.prefixPoint then
-			visit_token(node.prefixPoint)
+		if node.prefixpoint then
+			visit_token(node.prefixpoint)
 		end
 		visit_token(node.name)
-		if node.openParameters then
-			visit_token(node.openParameters)
+		if node.openparameters then
+			visit_token(node.openparameters)
 		end
 		if node.parameters then
 			visit_punctuated(node.parameters, visit_type_or_pack)
 		end
-		if node.closeParameters then
-			visit_token(node.closeParameters)
+		if node.closeparameters then
+			visit_token(node.closeparameters)
 		end
 	end
 end
@@ -701,17 +701,17 @@ end
 local function visit_type_typeof(node: luau.AstTypeTypeof)
 	if vtype and vtype.type_vtypeof(node) then
 		visit_token(node.typeof)
-		visit_token(node.openParens)
+		visit_token(node.openparens)
 		visit_expression(node.expression)
-		visit_token(node.closeParens)
+		visit_token(node.closeparens)
 	end
 end
 
 local function visit_type_group(node: luau.AstTypeGroup)
 	if vtype and vtype.type_vgroup(node) then
-		visit_token(node.openParens)
+		visit_token(node.openparens)
 		visit_type(node.type)
-		visit_token(node.closeParens)
+		visit_token(node.closeparens)
 	end
 end
 
@@ -735,30 +735,30 @@ end
 
 local function visit_type_array(node: luau.AstTypeArray)
 	if vtype and vtype.type_varray(node) then
-		visit_token(node.openBrace)
+		visit_token(node.openbrace)
 		if node.access then
 			visit_token(node.access)
 		end
 		visit_type(node.type)
-		visit_token(node.closeBrace)
+		visit_token(node.closebrace)
 	end
 end
 
 local function visit_type_table(node: luau.AstTypeTable)
 	if vtype and vtype.type_vtable(node) then
-		visit_token(node.openBrace)
+		visit_token(node.openbrace)
 		for _, entry in node.entries do
 			if entry.access then
 				visit_token(entry.access)
 			end
 			if entry.kind == "indexer" then
-				visit_token(entry.indexerOpen)
+				visit_token(entry.indexeropen)
 				visit_type(entry.key)
-				visit_token(entry.indexerClose)
+				visit_token(entry.indexerclose)
 			elseif entry.kind == "stringproperty" then
-				visit_token(entry.indexerOpen)
+				visit_token(entry.indexeropen)
 				visit_type_string(entry.key)
-				visit_token(entry.indexerClose)
+				visit_token(entry.indexerclose)
 			else
 				visit_token(entry.key)
 			end
@@ -768,7 +768,7 @@ local function visit_type_table(node: luau.AstTypeTable)
 				visit_token(entry.separator)
 			end
 		end
-		visit_token(node.closeBrace)
+		visit_token(node.closebrace)
 	end
 end
 
@@ -784,40 +784,40 @@ end
 
 local function visit_type_function(node: luau.AstTypeFunction)
 	if vtype and vtype.type_vfunction(node) then
-		if node.openGenerics then
-			visit_token(node.openGenerics)
+		if node.opengenerics then
+			visit_token(node.opengenerics)
 		end
 		if node.generics then
 			visit_punctuated(node.generics, visit_generic)
 		end
-		if node.genericPacks then
-			visit_punctuated(node.genericPacks, visit_generic_pack)
+		if node.genericpacks then
+			visit_punctuated(node.genericpacks, visit_generic_pack)
 		end
-		if node.closeGenerics then
-			visit_token(node.closeGenerics)
+		if node.closegenerics then
+			visit_token(node.closegenerics)
 		end
-		visit_token(node.openParens)
+		visit_token(node.openparens)
 		visit_punctuated(node.parameters, visit_type_function_parameter)
 		if node.vararg then
 			visit_type_pack(node.vararg)
 		end
-		visit_token(node.closeParens)
-		visit_token(node.returnArrow)
-		visit_type_pack(node.returnTypes)
+		visit_token(node.closeparens)
+		visit_token(node.returnarrow)
+		visit_type_pack(node.returntypes)
 	end
 end
 
 local function visit_type_pack_explicit(node: luau.AstTypePackExplicit)
 	if vtype and vtype.type_vexplicitpack(node) then
-		if node.openParens then
-			visit_token(node.openParens)
+		if node.openparens then
+			visit_token(node.openparens)
 		end
 		visit_punctuated(node.types, visit_type)
-		if node.tailType then
-			visit_type_pack(node.tailType)
+		if node.tailtype then
+			visit_type_pack(node.tailtype)
 		end
-		if node.closeParens then
-			visit_token(node.closeParens)
+		if node.closeparens then
+			visit_token(node.closeparens)
 		end
 	end
 end
@@ -1104,7 +1104,6 @@ local function add_type<Visitor>(visitor: Visitor): Visitor & AddType
 	for key, value in default_type :: any do
 		visitor[key] = value
 	end
-	visitor.type = table.clone(default_type)
 	return visitor
 end
 local function add_scope<Visitor>(visitor: Visitor): Visitor & AddScope
