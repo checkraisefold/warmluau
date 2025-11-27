@@ -148,7 +148,7 @@ if not compiler_success then
 	)
 end
 
-local success, loaded_project: defs.LoadedProject = pcall(luau.load, project_bytecode, "warmluau project")
+local success, loaded_project: defs.LoadedProject = pcall(luau.load, project_bytecode, "warmluau project", nil)
 if not success then
 	error(`Failed to load project at {styled(project_path)}! luau.load errored:\n{styled(loaded_project)}`) --
 end

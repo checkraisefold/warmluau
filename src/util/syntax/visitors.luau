@@ -657,7 +657,7 @@ local function visit_if_expression(node: luau.AstExprIfElse)
 	visit_expression(node.antecedent)
 end
 
-local function visit_type_or_pack(node: luau.AstType)
+local function visit_type_or_pack(node: luau.AstType | luau.AstTypePack)
 	if node.tag == "explicit" or node.tag == "generic" or node.tag == "variadic" then
 		visit_type_pack(node)
 	else

@@ -19,12 +19,6 @@ export type Ingredient<Options = any> = {
 	read prepare: (with: Options) -> PreparedIngredient<Options>,
 }
 
-export type PreparedIngredient<Options = any> = {
-	read process: (parsley: parser.Parsley, cooking: Cooking) -> (),
-	-- stupid hack to make this safely discriminated with Recipe
-	read _steps: nil,
-}
-
 export type Recipe = {
 	read add: (adding: { Recipe | PreparedIngredient }) -> (),
 	read _steps: { Recipe | PreparedIngredient },
@@ -37,6 +31,12 @@ export type Oven = {
 }
 
 export type Cooking = Oven & { cooking_file: File }
+
+export type PreparedIngredient<Options = any> = {
+	read process: (parsley: parser.Parsley, cooking: Cooking) -> (),
+	-- stupid hack to make this safely discriminated with Recipe
+	read _steps: nil,
+}
 
 export type OvenPreheat = {
 	input: string,
