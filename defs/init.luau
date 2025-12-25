@@ -1,14 +1,18 @@
 local filesystem = require("@lute/fs")
-local parser = require("@util/syntax/parser")
+local luau = require("@lute/luau")
+local parser = require("@std/syntax/parser")
 
-export type Ast = parser.Ast
-export type AstExpr = parser.AstExpr
-export type Parsley = parser.Parsley
+export type Ast = luau.AstStatBlock
+export type AstExpr = luau.AstExpr
+export type Parsley = {
+	root: Ast,
+	eof: luau.Eof,
+}
 
 export type LoadedProject = (require: <Path>(target: Path, ...never) -> unknown) -> ...unknown
 
 export type File = {
-	read parsed: parser.Parsley,
+	read parsed: Parsley,
 	read dense: number,
 	read src_path: string,
 	read dst_path: string,
@@ -33,7 +37,7 @@ export type Oven = {
 export type Cooking = Oven & { cooking_file: File }
 
 export type PreparedIngredient<Options = any> = {
-	read process: (parsley: parser.Parsley, cooking: Cooking) -> (),
+	read process: (parsley: Parsley, cooking: Cooking) -> (),
 	-- stupid hack to make this safely discriminated with Recipe
 	read _steps: nil,
 }

@@ -1,5 +1,5 @@
+local chef = require("@util/syntax/chef")
 local luau = require("@lute/luau")
-local visitors = require("@util/syntax/visitors")
 
 export type Processor = (luau.AstExpr) -> luau.AstExpr?
 type VisitorState = Processor
@@ -8,52 +8,52 @@ local function EXHAUSTIVE_MATCH<Msg>(value: never, msg: Msg?): never
 	error(msg or `Unknown value in exhaustive match: {value}`)
 end
 
-local value_visitor = visitors.create() :: visitors.Create<VisitorState>
+local value_visitor = chef.create() :: chef.Chef<VisitorState>
 
 local function try_eval(expression: luau.AstExpr): luau.AstExpr?
 	local evaluated = value_visitor.state(expression)
 	if not evaluated then
-		visitors.inner_visit_expression(expression)
+		chef.visitexpression(expression, value_visitor)
 		return nil
 	end
 
 	return evaluated
 end
 
-function value_visitor.vif(node)
+function value_visitor.visitStatIf(node: luau.AstStatIf)
 	do
 		local evaluated = try_eval(node.condition)
 		if evaluated then
 			node.condition = evaluated
 		end
 	end
-	visitors.inner_visit_block(node.consequent)
+	chef.visitblock(node.thenblock, value_visitor)
 	for _, elseif_node in node.elseifs do
 		local evaluated = try_eval(elseif_node.condition)
 		if evaluated then
 			elseif_node.condition = evaluated
 		end
-		visitors.inner_visit_block(elseif_node.consequent)
+		chef.visitblock(elseif_node.thenblock, value_visitor)
 	end
-	if node.antecedent then
-		visitors.inner_visit_block(node.antecedent)
+	if node.elseblock then
+		chef.visitblock(node.elseblock, value_visitor)
 	end
 	return false
 end
 
-function value_visitor.vwhile(node)
+function value_visitor.visitStatWhile(node: luau.AstStatWhile)
 	do
 		local evaluated = try_eval(node.condition)
 		if evaluated then
 			node.condition = evaluated
 		end
 	end
-	visitors.inner_visit_block(node.body)
+	chef.visitblock(node.body, value_visitor)
 	return false
 end
 
-function value_visitor.vrepeat(node)
-	visitors.inner_visit_block(node.body)
+function value_visitor.visitStatRepeat(node: luau.AstStatRepeat)
+	chef.visitblock(node.body, value_visitor)
 	do
 		local evaluated = try_eval(node.condition)
 		if evaluated then
@@ -63,7 +63,7 @@ function value_visitor.vrepeat(node)
 	return false
 end
 
-function value_visitor.vreturn(node)
+function value_visitor.visitStatReturn(node: luau.AstStatReturn)
 	for _, expression_pair in node.expressions do
 		local evaluated = try_eval(expression_pair.node)
 		if evaluated then
@@ -73,8 +73,8 @@ function value_visitor.vreturn(node)
 	return false
 end
 
-function value_visitor.vlocal_declaration(node)
-	visitors.inner_visit_punctuated(node.variables, visitors.inner_visit_local)
+function value_visitor.visitStatLocalDeclaration(node)
+	chef.inner_visit_punctuated(node.variables, chef.inner_visit_local)
 	for _, value in node.values do
 		local evaluated = try_eval(value.node)
 		if evaluated then
@@ -84,8 +84,8 @@ function value_visitor.vlocal_declaration(node)
 	return false
 end
 
-function value_visitor.vfor(node)
-	visitors.inner_visit_local(node.variable)
+function value_visitor.visitStatFor(node: luau.AstStatFor)
+	chef.inner_visit_local(node.variable)
 	do
 		local evaluated = try_eval(node.from)
 		if evaluated then
@@ -104,27 +104,27 @@ function value_visitor.vfor(node)
 			node.step = evaluated
 		end
 	end
-	visitors.inner_visit_block(node.body)
+	chef.inner_visit_block(node.body)
 	return false
 end
 
 function value_visitor.vfor_in(node)
-	visitors.inner_visit_token(node.forkeyword)
-	visitors.inner_visit_punctuated(node.variables, visitors.inner_visit_local)
-	visitors.inner_visit_token(node.inkeyword)
+	chef.inner_visit_token(node.forkeyword)
+	chef.inner_visit_punctuated(node.variables, chef.inner_visit_local)
+	chef.inner_visit_token(node.inkeyword)
 	for _, value in node.values do
 		local evaluated = try_eval(value.node)
 		if evaluated then
 			value.node = evaluated
 		end
 	end
-	visitors.inner_visit_block(node.body)
-	visitors.inner_visit_token(node.endkeyword)
+	chef.inner_visit_block(node.body)
+	chef.inner_visit_token(node.endkeyword)
 	return false
 end
 
 function value_visitor.vassign(node)
-	visitors.inner_visit_punctuated(node.variables, visitors.inner_visit_expression)
+	chef.inner_visit_punctuated(node.variables, chef.inner_visit_expression)
 	for _, value in node.values do
 		local evaluated = try_eval(value.node)
 		if evaluated then
@@ -135,7 +135,7 @@ function value_visitor.vassign(node)
 end
 
 function value_visitor.vcompound_assign(node)
-	visitors.inner_visit_expression(node.variable)
+	chef.inner_visit_expression(node.variable)
 	local evaluated = try_eval(node.value)
 	if evaluated then
 		node.value = evaluated
@@ -144,7 +144,7 @@ function value_visitor.vcompound_assign(node)
 end
 
 function value_visitor.vcall(node)
-	visitors.inner_visit_expression(node.func)
+	chef.inner_visit_expression(node.func)
 	for _, argument_pair in node.arguments do
 		local evaluated = try_eval(argument_pair.node)
 		if evaluated then

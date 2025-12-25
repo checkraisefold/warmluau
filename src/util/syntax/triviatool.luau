@@ -1,11 +1,11 @@
+local chef = require("@util/syntax/chef")
 local luau = require("@lute/luau")
-local visitors = require("@util/syntax/visitors")
 
 type VisitorState = {
 	leading: { luau.Trivia },
 	trailing: { luau.Trivia },
 }
-local visitor = visitors.create() :: visitors.Create<VisitorState>
+local visitor = chef.create() :: chef.Chef<VisitorState>
 
 local function add_token(token: luau.Token<string>): ()
 	local leading = token.leadingtrivia
@@ -18,25 +18,28 @@ local function add_token(token: luau.Token<string>): ()
 	table.move(trailing, 1, #trailing, #state_trailing + 1, state_trailing)
 end
 
-function visitor.vtoken(node)
+function visitor.visitToken(node)
 	add_token(node)
 end
 
 local function steal_from_token<T>(token: luau.Token<T>, trivia: VisitorState?): VisitorState
 	trivia = trivia or { leading = {}, trailing = {} }
-	visitor:visit_ast_token(token, trivia)
+	visitor.state = trivia
+	chef.visittoken(token, visitor)
 	return trivia
 end
 
 local function steal_from_expr(expr: luau.AstExpr, trivia: VisitorState?): VisitorState
 	trivia = trivia or { leading = {}, trailing = {} }
-	visitor:visit_ast_expression(expr, trivia)
+	visitor.state = trivia
+	chef.visitexpression(expr, visitor)
 	return trivia
 end
 
 local function steal_from_statement(stat: luau.AstStat, trivia: VisitorState?): VisitorState
 	trivia = trivia or { leading = {}, trailing = {} }
-	visitor:visit_ast_statement(stat, trivia)
+	visitor.state = trivia
+	chef.visitstatement(stat, visitor)
 	return trivia
 end
 

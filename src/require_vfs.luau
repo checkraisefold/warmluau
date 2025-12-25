@@ -28,9 +28,7 @@ return dst("@warmluau", IMPL :: typeof(defs), {
 		nil,
 		dir({
 			analyzer = require("@util/syntax/analyzer"),
-			parser = require("@util/syntax/parser"),
-			printer = require("@util/syntax/printer"),
-			visitors = require("@util/syntax/visitors"),
+			chef = require("@util/syntax/chef"),
 		})
 	),
 })

@@ -11,15 +11,19 @@
     "tasks": {
         "version": "2.0.0",
     },
+    "extensions": {
+        "recommendations": ["JohnnyMorganz.luau-lsp", "JohnnyMorganz.stylua"],
+        "unwantedRecommendations": ["Kampfkarren.selene-vscode"]
+    },
     "settings": {
+        "[luau]": {
+            "editor.defaultFormatter": "JohnnyMorganz.stylua"
+        },
         "luau-lsp.fflags.enableNewSolver": true,
         "luau-lsp.fflags.enableByDefault": true,
         "luau-lsp.fflags.sync": false,
         "luau-lsp.sourcemap.enabled": false,
         "luau-lsp.platform.type": "standard",
-        "luau-lsp.fflags.override": {
-            "LuauSolverV2": "true"
-        },
         "luau-lsp.ignoreGlobs": [
             "ext/**"
         ]

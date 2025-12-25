@@ -286,7 +286,7 @@ function analyzer.evaluate_conditional(self: Identity, node: luau.AstExprIfElse)
 		return cunknown()
 	end
 	if truthy_eh(condition) then
-		return (self:evaluate_unit(node.consequent))
+		return (self:evaluate_unit(node.thenexpr))
 	end
 	for _, elif in node.elseifs do
 		condition = self:evaluate_unit(elif.condition)
@@ -294,10 +294,10 @@ function analyzer.evaluate_conditional(self: Identity, node: luau.AstExprIfElse)
 			return cunknown()
 		end
 		if truthy_eh(condition) then
-			return (self:evaluate_unit(elif.consequent))
+			return (self:evaluate_unit(elif.thenexpr))
 		end
 	end
-	return (self:evaluate_unit(node.antecedent))
+	return (self:evaluate_unit(node.elseexpr))
 end
 
 function analyzer.evaluate_interpstring(
@@ -521,27 +521,25 @@ local function value_to_expression(value: ConstantData): luau.AstExpr
 	if type(value) == "boolean" then
 		local output: luau.AstExprConstantBool = {
 			leadingtrivia = {},
-			position = {
-				line = 0,
-				column = 0,
-			},
+			location = luau.span.create({ begincolumn = 0, beginline = 0, endcolumn = 0, endline = 0 }),
 			text = if value then "true" else "false",
 			value = value,
 			trailingtrivia = {},
 			tag = "boolean",
+			kind = "expr",
+			istoken = true,
 		}
 		return output
 	elseif type(value) == "number" then
 		local output: luau.AstExprConstantNumber = {
 			leadingtrivia = {},
-			position = {
-				line = 0,
-				column = 0,
-			},
+			location = luau.span.create({ begincolumn = 0, beginline = 0, endcolumn = 0, endline = 0 }),
 			text = tostring(value),
 			value = value,
 			trailingtrivia = {},
 			tag = "number",
+			kind = "expr",
+			istoken = true,
 		}
 		return output
 	elseif type(value) == "vector" then
@@ -557,27 +555,25 @@ local function value_to_expression(value: ConstantData): luau.AstExpr
 	elseif type(value) == "string" then
 		local output: luau.AstExprConstantString = {
 			leadingtrivia = {},
-			position = {
-				line = 0,
-				column = 0,
-			},
+			location = luau.span.create({ begincolumn = 0, beginline = 0, endcolumn = 0, endline = 0 }),
 			text = value,
 			trailingtrivia = {},
 			tag = "string",
-			quotestyle = "single",
+			quotestyle = "single" :: "single" | "double" | "block" | "interp",
 			blockdepth = 0,
+			kind = "expr",
+			istoken = true,
 		}
 		return output
 	elseif type(value) == "nil" then
 		local output: luau.AstExprConstantNil = {
 			leadingtrivia = {},
-			position = {
-				line = 0,
-				column = 0,
-			},
+			location = luau.span.create({ begincolumn = 0, beginline = 0, endcolumn = 0, endline = 0 }),
 			text = "nil",
 			trailingtrivia = {},
 			tag = "nil",
+			kind = "expr",
+			istoken = true,
 		}
 		return output
 	else

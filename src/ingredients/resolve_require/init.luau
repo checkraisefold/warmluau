@@ -1,9 +1,10 @@
 local REQUIRE_GLOBAL = "require"
 local DEFAULT_INDEXING_STYLE: IndexingStyle = "property"
 
+local chef = require("@util/syntax/chef")
 local convert_require = require("@warmluau/ingredients/resolve_require")
 local defs = require("@warmluau/")
-local filesystem = require("@lute/fs")
+local filesystem = require("@std/fs")
 local fspath = require("@util/fspath")
 local json = require("@batteries/json")
 local luau = require("@lute/luau")
@@ -11,7 +12,6 @@ local process = require("@lute/process")
 local require_resolver = require("@util/require_resolver")
 local sourcemap = require("@util/sourcemap")
 local styled = require("@util/pretty_print")
-local visitors = require("@util/syntax/visitors")
 
 type Opts = convert_require.Opts
 type IndexingStyle = convert_require.IndexingStyle
@@ -111,9 +111,9 @@ local function prepare(opts: Opts): defs.PreparedIngredient<Opts>
 
 	local indices = rojo_sourcemap_indices(sourcemap_parent_path, rojo_sourcemap, indexing_style)
 
-	local resolving_visitor = visitors.create() :: visitors.Create<VisitorState>
+	local resolving_visitor = chef.create() :: chef.Chef<VisitorState>
 
-	function resolving_visitor.vcall(node)
+	function resolving_visitor.visitExprCall(node: luau.AstExprCall)
 		local func = node.func
 		if (func.tag ~= "global") or (func.name.text ~= REQUIRE_GLOBAL) then
 			return true
@@ -134,7 +134,9 @@ local function prepare(opts: Opts): defs.PreparedIngredient<Opts>
 			call_expr = luau.parseexpr(roblox_target)
 			arg.node = call_expr
 		else
-			print(`Could not resolve roblox path for "{call_expr.text}" at {state.path}:{func.name.position.line}:`)
+			print(
+				`Could not resolve roblox path for "{call_expr.text}" at {state.path}:{func.name.location.beginline}:`
+			)
 		end
 
 		return true
@@ -147,10 +149,11 @@ local function prepare(opts: Opts): defs.PreparedIngredient<Opts>
 		end
 
 		local src_path = oven.cooking_file.src_path
-		resolving_visitor:visit_ast_block(ast, {
+		resolving_visitor.state = {
 			path = src_path,
 			resolver = require_resolver.from_path(src_path),
-		})
+		}
+		chef.visitblock(ast, resolving_visitor)
 	end
 
 	local prepared_ingredient: defs.PreparedIngredient<Opts> = {

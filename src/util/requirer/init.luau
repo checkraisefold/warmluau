@@ -1,6 +1,6 @@
 local PREPEND = [[math.randomseed(0); local require = ...;]]
 
-local filesystem = require("@lute/fs")
+local filesystem = require("@std/fs")
 local fspath = require("@util/fspath")
 local luau = require("@lute/luau")
 local override = require("@self/override")

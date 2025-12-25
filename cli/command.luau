@@ -6,13 +6,13 @@ local PROJECT_FILE_MATCH = "^(.*)%.warm%.luau?$"
 
 local cli = require("@batteries/cli")
 local defs = require("@warmluau/")
-local filesystem = require("@lute/fs")
+local filesystem = require("@std/fs")
 local fspath = require("@util/fspath")
 local luau = require("@lute/luau")
 local meta = require("@lib/meta")
 local options = require("./options")
 local oven = require("@lib/oven")
-local printer = require("@util/syntax/printer")
+local printer = require("@std/syntax/printer")
 local process = require("@lute/process")
 local recipe = require("@lib/oven/recipe")
 local require_vfs = require("@lib/require_vfs")
@@ -52,7 +52,7 @@ end
 assert(filesystem.exists(project_path), `project file at {styled(project_path)} does not exist.`)
 assert(filesystem.type(project_path) == "file", `project file at {styled(project_path)} is not a file.`)
 
-local project_modified = filesystem.stat(project_path).modified
+local project_modified = filesystem.metadata(project_path).modified
 
 local preheated: typeof(oven.preheat(...))
 
@@ -65,7 +65,7 @@ else
 	assert(input_exists, `bake requires an input dir that exists, got {styled(input_dir)}`)
 	local output_dir = parser:get("output")
 	if not filesystem.exists(output_dir) then
-		filesystem.mkdir(output_dir)
+		filesystem.createdirectory(output_dir)
 	end
 
 	preheated = oven.preheat({

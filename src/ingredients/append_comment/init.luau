@@ -1,6 +1,6 @@
 local append_comment = require("@warmluau/ingredients/append_comment")
+local chef = require("@util/syntax/chef")
 local luau = require("@lute/luau")
-local visitors = require("@util/syntax/visitors")
 local warmluau = require("@warmluau/")
 
 type Opts = append_comment.Opts
@@ -14,19 +14,21 @@ end
 local function prepare_append_comment(opts: Opts): warmluau.PreparedIngredient<Opts>
 	local mode: Mode = opts.mode or "early"
 
-	local visitor = visitors.create() :: visitors.Create<true?>
+	local visitor = chef.create() :: chef.Chef<true?>
 	local function comment(): luau.SingleLineComment
 		return {
 			tag = "comment",
 			text = opts.text,
-			location = {
-				begin = { column = 0, line = 0 },
-				["end"] = { column = 0, line = 0 },
-			},
+			location = luau.span.create({
+				begincolumn = 0,
+				beginline = 0,
+				endcolumn = 0,
+				endline = 0,
+			}),
 		}
 	end
 
-	function visitor.vtoken(token)
+	function visitor.visitToken(token: luau.Token<string>)
 		if visitor.state then
 			return
 		end
@@ -44,9 +46,9 @@ local function prepare_append_comment(opts: Opts): warmluau.PreparedIngredient<O
 		local ast = parsley.root
 		local statements = ast.statements
 		if next(statements) then
-			visitor:visit_ast_block(ast)
+			chef.visitblock(ast, visitor)
 		else
-			visitor:visit_ast_token(parsley.eof)
+			chef.visittoken(parsley.eof, visitor)
 		end
 	end
 

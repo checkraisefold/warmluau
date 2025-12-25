@@ -1,14 +1,16 @@
 local FAILED_OUTPUT_FILE = "return error('warmluau could not generate an output for this file');"
 
 local defs = require("@warmluau/")
-local filesystem = require("@lute/fs")
+local filesystem = require("@std/fs")
 local fspath = require("@util/fspath")
 local luau = require("@lute/luau")
 local styled = require("@util/pretty_print")
 
+-- why do they call it oven when you of in the cold food of hot eat the food
+
 type Process = index<defs.PreparedIngredient, "process">
 
-local function get_handle(root: fspath.Nav, file: fspath.Nav): filesystem.FileHandle?
+local function get_handle(root: fspath.Nav, file: fspath.Nav): filesystem.file?
 	local file_path = fspath.to_str(fspath.push(file, root))
 	if not filesystem.exists(file_path) then
 		local merged = table.clone(root)
@@ -18,7 +20,7 @@ local function get_handle(root: fspath.Nav, file: fspath.Nav): filesystem.FileHa
 			merged[merged_count] = file[file_index]
 			local dir_path = fspath.to_str(merged)
 			if not filesystem.exists(dir_path) then
-				local success, err = pcall(filesystem.mkdir, dir_path)
+				local success, err = pcall(filesystem.createdirectory, dir_path, nil)
 				if not success then
 					print(
 						`Could not ensure file {file_path} exists;`
@@ -43,7 +45,7 @@ local function locate_luau_files(directory_path: string, recurse: boolean): { fs
 	local file_positions: { fspath.Nav } = {}
 	local file_positions_count = 0
 
-	local entries = filesystem.listdir(directory_path)
+	local entries = filesystem.listdirectory(directory_path)
 	local entries_count = #entries
 
 	local entries_index = 0
@@ -57,7 +59,7 @@ local function locate_luau_files(directory_path: string, recurse: boolean): { fs
 		if entry.type ~= "file" then
 			if entry.type == "dir" and recurse then
 				local full_dir = fspath.to_str(fspath.push(entry_nav, directory_path))
-				local child_entries = filesystem.listdir(full_dir)
+				local child_entries = filesystem.listdirectory(full_dir)
 				local child_entries_count = #child_entries
 				for child_index = 1, child_entries_count do
 					local child = child_entries[child_index]
@@ -118,13 +120,13 @@ local function oven_preheat(preheat: defs.OvenPreheat): defs.Oven
 		assert(filesystem.exists(src_path), "path does not exist")
 		local dst_path = fspath.to_str(fspath.push(file_location, output_nav))
 		if should_cache then
-			local src_modified = filesystem.stat(src_path).modified
+			local src_modified = filesystem.metadata(src_path).modified
 			if project_modified and project_modified > src_modified then
 				src_modified = project_modified --
 			end
 			local cached_eh = --
 				filesystem.exists(dst_path) --
-				and (src_modified < filesystem.stat(dst_path).modified)
+				and (src_modified < filesystem.metadata(dst_path).modified)
 			if cached_eh then
 				continue
 			end

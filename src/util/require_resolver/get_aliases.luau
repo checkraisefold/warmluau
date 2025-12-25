@@ -1,4 +1,4 @@
-local filesystem = require("@lute/fs")
+local filesystem = require("@std/fs")
 local fspath = require("@util/fspath")
 local json = require("@batteries/json")
 local process = require("@lute/process")

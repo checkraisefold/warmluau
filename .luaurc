@@ -1,15 +1,17 @@
 {
     "languageMode": "strict",
-    "aliases":{
-        "lute": "~/.lute/typedefs/0.1.0/lute",
+    "lint": {
+        "LocalShadow": false
+    }, 
+    "aliases": {
+        "lib": "./src",
+        "warmluau": "./defs",
+        "util": "./src/util",
+
         "ext": "./ext",
         "batteries": "./ext/batteries",
 
-        "util": "./src/util",
-        "warmluau": "./defs",
-        "lib": "./src"
-    },
-    "lint": {
-        "LocalShadow": false
+        "std": "~/.lute\/typedefs/0.1.0/std",
+        "lute": "~/.lute/typedefs/0.1.0/lute"
     }
 }

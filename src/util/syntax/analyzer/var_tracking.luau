@@ -1,6 +1,6 @@
+local chef = require("@util/syntax/chef")
 local defs = require("./defs")
 local luau = require("@lute/luau")
-local visitors = require("@util/syntax/visitors")
 
 type Variable = defs.Variable
 type Tracked = defs.Tracked
@@ -40,13 +40,13 @@ local function ensure_global(state: VisitorState, name: string): Variable
 	return variable
 end
 
-local visitor = visitors.add_scope(visitors.base() :: visitors.Base<VisitorState>)
+local visitor = chef.create() :: chef.Chef<VisitorState>
 
-function visitor.scope_open()
+function visitor.ext.visitScopeOpen()
 	local state = visitor.state
 	INSERT(state.scopes, {} :: Scope)
 end
-function visitor.scope_close()
+function visitor.ext.visitScopeClose()
 	local state = visitor.state
 	ASSERT(
 		table.remove(state.scopes),
@@ -74,13 +74,13 @@ local function scope_insert_local(identifier: luau.AstLocal, assignment: luau.As
 	scope[identifier.name.text] = var
 end
 
-visitor.scope_insert_local = scope_insert_local
+visitor.ext.visitScopeInsertLocal = scope_insert_local
 
-function visitor.scope_insert_local_function(node): ()
+function visitor.ext.visitScopeInsertLocalFunction(node): ()
 	scope_insert_local(node.name)
 end
 
-function visitor.vassign(node)
+function visitor.visitStatAssign(node: luau.AstStatAssign)
 	local state = visitor.state
 	local scopes = state.scopes
 	local scopes_count = #scopes
@@ -112,7 +112,7 @@ function visitor.vassign(node)
 	return true
 end
 
-function visitor.vglobal(node)
+function visitor.visitExprGlobal(node: luau.AstExprGlobal)
 	local state = visitor.state
 
 	state.tracked.globals[node.name.text] = ensure_global(state, node.name.text)
@@ -144,7 +144,7 @@ local function local_tracked_variable(node: luau.AstLocal): Variable
 	end
 end
 
-function visitor.vlocal_reference(node)
+function visitor.visitExprLocal(node: luau.AstExprLocal)
 	local inner = node["local"]
 	visitor.state.tracked.locals[inner] = local_tracked_variable(inner)
 
@@ -157,10 +157,11 @@ local function track_values(root: luau.AstStatBlock): Tracked
 		locals = {},
 		variables = {},
 	}
-	visitor:visit_ast_block(root, {
+	visitor.state = {
 		tracked = tracked,
 		scopes = {},
-	})
+	}
+	chef.visitblock(root, visitor)
 	return tracked
 end
 

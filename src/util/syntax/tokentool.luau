@@ -1,12 +1,12 @@
+local chef = require("@util/syntax/chef")
 local luau = require("@lute/luau")
-local visitors = require("@util/syntax/visitors")
 
-local first_last_visitor = visitors.create() :: visitors.Create<{
+local first_last_visitor = chef.create() :: chef.Chef<{
 	first: luau.Token,
 	last: luau.Token,
 }?>
 
-function first_last_visitor.vtoken(node): ()
+function first_last_visitor.visitToken(node): ()
 	local state = first_last_visitor.state
 	if state then
 		state.last = node
@@ -20,23 +20,33 @@ function first_last_visitor.vtoken(node): ()
 end
 
 local function from_expr(node: luau.AstExpr)
-	return first_last_visitor:visit_ast_expression(node)
+	first_last_visitor.state = nil
+	chef.visitexpression(node, first_last_visitor)
+	return first_last_visitor.state
 end
 
 local function from_block(node: luau.AstStatBlock)
-	return first_last_visitor:visit_ast_block(node)
+	first_last_visitor.state = nil
+	chef.visitblock(node, first_last_visitor)
+	return first_last_visitor.state
 end
 
 local function from_stat(node: luau.AstStat)
-	return first_last_visitor:visit_ast_statement(node)
+	first_last_visitor.state = nil
+	chef.visitstatement(node, first_last_visitor)
+	return first_last_visitor.state
 end
 
 local function from_type(node: luau.AstType)
-	return first_last_visitor:visit_ast_type(node)
+	first_last_visitor.state = nil
+	chef.visittype(node, first_last_visitor)
+	return first_last_visitor.state
 end
 
 local function from_type_pack(node: luau.AstTypePack)
-	return first_last_visitor:visit_ast_type_pack(node)
+	first_last_visitor.state = nil
+	chef.visittypepack(node, first_last_visitor)
+	return first_last_visitor.state
 end
 
 local function first_from_expr(node)

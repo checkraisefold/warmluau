@@ -1,10 +1,10 @@
 local analyzer = require("@util/syntax/analyzer")
+--local chef = require("@util/syntax/chef")
 local luau = require("@lute/luau")
 local replacer = require("@self/replacer")
 local resolve_constant = require("@warmluau/ingredients/resolve_constant")
 local tokentool = require("@util/syntax/tokentool")
 local triviatool = require("@util/syntax/triviatool")
-local visitors = require("@util/syntax/visitors")
 local warmluau = require("@warmluau/")
 
 type Opts = resolve_constant.Opts
@@ -12,15 +12,15 @@ type Opts = resolve_constant.Opts
 -- TODO: asttoolkit
 local function cglobal(text: string): luau.AstExprGlobal
 	return {
+		kind = "expr",
 		tag = "global",
+		location = luau.span.create({ begincolumn = 0, beginline = 0, endcolumn = 0, endline = 0 }),
 		name = {
 			leadingtrivia = {},
-			position = {
-				line = 0,
-				column = 0,
-			},
+			location = luau.span.create({ begincolumn = 0, beginline = 0, endcolumn = 0, endline = 0 }),
 			text = text,
 			trailingtrivia = {},
+			istoken = true,
 		},
 	}
 end
@@ -100,7 +100,7 @@ local function prepare_resolve_constant(opts: Opts): warmluau.PreparedIngredient
 			if expression.tag == "call" then
 				local result = { computer:evaluate_call(expression) }
 				if #result ~= 1 then
-					visitors.inner_visit_expression(expression)
+					--chef.inner_visit_expression(expression)
 					return nil
 				end
 				evaluated = result[1]
@@ -108,7 +108,7 @@ local function prepare_resolve_constant(opts: Opts): warmluau.PreparedIngredient
 				evaluated = computer:evaluate(expression)
 			end
 			if evaluated.kind == "unknown" then
-				visitors.inner_visit_expression(expression)
+				--chef.inner_visit_expression(expression)
 				return nil
 			end
 
