@@ -7,7 +7,7 @@ local visitor = require("@std/syntax/visitor")
 -- project, which introduces significantly more headaches for maintenance and updates down the line.
 export type AnyFunc = (...any) -> ...any
 export type Overrides = setmetatable<{ [string]: AnyFunc }, { __index: visitor.Visitor }>
-export type Chef<State = unknown> = setmetatable<{
+export type Identity<State = unknown> = setmetatable<{
 	_visitor: visitor.Visitor,
 	_overrides: Overrides,
 	_reserved: { [string]: AnyFunc },

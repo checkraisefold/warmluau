@@ -1,6 +1,5 @@
 local filesystem = require("@lute/fs")
 local luau = require("@lute/luau")
-local parser = require("@std/syntax/parser")
 
 export type Ast = luau.AstStatBlock
 export type AstExpr = luau.AstExpr

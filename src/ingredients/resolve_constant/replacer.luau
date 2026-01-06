@@ -8,7 +8,7 @@ local function EXHAUSTIVE_MATCH<Msg>(value: never, msg: Msg?): never
 	error(msg or `Unknown value in exhaustive match: {value}`)
 end
 
-local value_visitor = chef.create() :: chef.Chef<VisitorState>
+local value_visitor = chef.create() :: chef.Identity<VisitorState>
 
 local function try_eval(expression: luau.AstExpr): luau.AstExpr?
 	local evaluated = value_visitor.state(expression)

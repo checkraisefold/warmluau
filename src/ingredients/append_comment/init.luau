@@ -14,7 +14,7 @@ end
 local function prepare_append_comment(opts: Opts): warmluau.PreparedIngredient<Opts>
 	local mode: Mode = opts.mode or "early"
 
-	local visitor = chef.create() :: chef.Chef<true?>
+	local visitor = chef.create() :: chef.Identity<true?>
 	local function comment(): luau.SingleLineComment
 		return {
 			tag = "comment",
@@ -46,9 +46,9 @@ local function prepare_append_comment(opts: Opts): warmluau.PreparedIngredient<O
 		local ast = parsley.root
 		local statements = ast.statements
 		if next(statements) then
-			chef.visitblock(ast, visitor)
+			chef.visitblockstate(ast, visitor, nil)
 		else
-			chef.visittoken(parsley.eof, visitor)
+			chef.visittokenstate(parsley.eof, visitor, nil)
 		end
 	end
 

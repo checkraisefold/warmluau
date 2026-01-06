@@ -111,7 +111,7 @@ local function prepare(opts: Opts): defs.PreparedIngredient<Opts>
 
 	local indices = rojo_sourcemap_indices(sourcemap_parent_path, rojo_sourcemap, indexing_style)
 
-	local resolving_visitor = chef.create() :: chef.Chef<VisitorState>
+	local resolving_visitor = chef.create() :: chef.Identity<VisitorState>
 
 	function resolving_visitor.visitExprCall(node: luau.AstExprCall)
 		local func = node.func
@@ -149,11 +149,10 @@ local function prepare(opts: Opts): defs.PreparedIngredient<Opts>
 		end
 
 		local src_path = oven.cooking_file.src_path
-		resolving_visitor.state = {
+		chef.visitblockstate(ast, resolving_visitor, {
 			path = src_path,
 			resolver = require_resolver.from_path(src_path),
-		}
-		chef.visitblock(ast, resolving_visitor)
+		})
 	end
 
 	local prepared_ingredient: defs.PreparedIngredient<Opts> = {

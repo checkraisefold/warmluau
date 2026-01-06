@@ -1,7 +1,7 @@
 local chef = require("@util/syntax/chef")
 local luau = require("@lute/luau")
 
-local first_last_visitor = chef.create() :: chef.Chef<{
+local first_last_visitor = chef.create() :: chef.Identity<{
 	first: luau.Token,
 	last: luau.Token,
 }?>

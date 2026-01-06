@@ -40,7 +40,7 @@ local function ensure_global(state: VisitorState, name: string): Variable
 	return variable
 end
 
-local visitor = chef.create() :: chef.Chef<VisitorState>
+local visitor = chef.create() :: chef.Identity<VisitorState>
 
 function visitor.ext.visitScopeOpen()
 	local state = visitor.state

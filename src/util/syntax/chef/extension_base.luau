@@ -3,7 +3,7 @@ local types = require("./types")
 
 local extension_base = {}
 
-local function visit_function_body(node: luau.AstFunctionBody, chef: types.Chef)
+local function visit_function_body(node: luau.AstFunctionBody, chef: types.Identity)
 	if node.self then
 		table.insert(chef._pending_locals, node.self)
 	end
@@ -13,70 +13,81 @@ local function visit_function_body(node: luau.AstFunctionBody, chef: types.Chef)
 end
 
 local function visit_function_node(
+	self: types.Identity,
 	override: boolean,
-	node: luau.AstNode & { body: luau.AstFunctionBody },
-	chef: types.Chef
-)
+	node: luau.AstNode & { body: luau.AstFunctionBody }
+): boolean
 	if not override then
-		return
+		return override
 	end
 
-	visit_function_body(node.body, chef)
+	visit_function_body(node.body, self)
+	return true
 end
 
 extension_base.visitStatFunction = visit_function_node
 extension_base.visitExprAnonymousFunction = visit_function_node
 extension_base.visitStatTypeFunction = visit_function_node
 
-function extension_base.visitStatFor(override: boolean, node: luau.AstStatFor, chef: types.Chef)
+function extension_base.visitStatFor(self: types.Identity, override: boolean, node: luau.AstStatFor): boolean
 	if not override then
-		return
+		return override
 	end
 
-	table.insert(chef._pending_locals, node.variable)
+	table.insert(self._pending_locals, node.variable)
+	return true
 end
 
-function extension_base.visitStatForIn(override: boolean, node: luau.AstStatForIn, chef: types.Chef)
+function extension_base.visitStatForIn(self: types.Identity, override: boolean, node: luau.AstStatForIn): boolean
 	if not override then
-		return
+		return override
 	end
 
 	for _, variable in node.variables do
-		table.insert(chef._pending_locals, variable.node)
+		table.insert(self._pending_locals, variable.node)
 	end
+	return true
 end
 
-function extension_base.visitStatLocalDeclarationEnd(_, node: luau.AstStatLocal, chef: types.Chef)
+function extension_base.visitStatLocalDeclarationEnd(self: types.Identity, override: boolean, node: luau.AstStatLocal)
 	for index, variable in node.variables do
 		local value_pair = node.values[index]
 		local value = value_pair and value_pair.node
-		chef.ext.visitScopeInsertLocal(variable.node, value)
+		self.ext.visitScopeInsertLocal(variable.node, value)
 	end
 end
 
-function extension_base.visitStatLocalFunction(override: boolean, node: luau.AstStatLocalFunction, chef: types.Chef)
+function extension_base.visitStatLocalFunction(
+	self: types.Identity,
+	override: boolean,
+	node: luau.AstStatLocalFunction
+): boolean
 	if not override then
-		return
+		return override
 	end
 
-	visit_function_body(node.body, chef)
-	chef.ext.visitScopeInsertLocalFunction(node)
+	visit_function_body(node.body, self)
+	self.ext.visitScopeInsertLocalFunction(node)
+
+	return true
 end
 
-function extension_base.visitStatBlock(override: boolean, _, chef: types.Chef)
+function extension_base.visitStatBlock(self: types.Identity, override: boolean, _): boolean
 	if not override then
-		return
+		return override
 	end
-	chef.ext.visitScopeOpen()
+	self.ext.visitScopeOpen()
 
-	for _, pending in chef._pending_locals do
-		chef.ext.visitScopeInsertLocal(pending)
+	for _, pending in self._pending_locals do
+		self.ext.visitScopeInsertLocal(pending)
 	end
-	table.clear(chef._pending_locals)
+	table.clear(self._pending_locals)
+
+	return true
 end
 
-function extension_base.visitStatBlockEnd(_, _, chef: types.Chef)
-	chef.ext.visitScopeClose()
+function extension_base.visitStatBlockEnd(self: types.Identity, _, _)
+	self.ext.visitScopeClose()
 end
 
 return extension_base

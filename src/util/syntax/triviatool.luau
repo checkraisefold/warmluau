@@ -5,7 +5,7 @@ type VisitorState = {
 	leading: { luau.Trivia },
 	trailing: { luau.Trivia },
 }
-local visitor = chef.create() :: chef.Chef<VisitorState>
+local visitor = chef.create() :: chef.Identity<VisitorState>
 
 local function add_token(token: luau.Token<string>): ()
 	local leading = token.leadingtrivia
