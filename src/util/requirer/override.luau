@@ -1,11 +1,11 @@
-local fspath = require("@util/fspath")
+local path = require("@std/path")
 
 local override = {}
 local metatable = { __index = override }
 
 type InternalIdentity = setmetatable<{
 	children: { [string]: InternalIdentity },
-	path: fspath.Nav,
+	path: path.path,
 	value: unknown?,
 }, typeof(metatable)>
 
@@ -13,10 +13,10 @@ export type Identity<Children = { [string]: InternalIdentity }> = InternalIdenti
 	children: Children,
 }
 
-local function constructor<Value, Children>(path: string, value: Value, children: Children?): Identity<Children>
+local function constructor<Value, Children>(path_input: string, value: Value, children: Children?): Identity<Children>
 	local self = setmetatable({
 		children = children or {},
-		path = fspath.to_nav(path),
+		path = path.parse(path_input),
 		value = value,
 	}, metatable)
 

@@ -1,8 +1,8 @@
 local ALIAS_PATTERN = `^@(.+)`
 
-local filesystem = require("@lute/fs")
-local fspath = require("@util/fspath")
+local filesystem = require("@std/fs")
 local get_aliases = require("@self/get_aliases")
+local path = require("@std/path")
 local resolver_types = require("@self/types")
 
 type RequireAliases = resolver_types.RequireAliases
@@ -14,20 +14,20 @@ local function ASSERT<Value>(value: Value, message: string?)
 	error(message or "Assertion Failed!", 2)
 end
 
-local function resolve_module_path(file: string): (string, string?)
-	file = ASSERT(fspath.normalize(file), `could not normalize file's path '{file}'`)
+local function resolve_module_path(file: path.pathlike): (path.pathlike, path.pathlike?)
+	file = ASSERT(path.normalize(file), `could not normalize file's path '{file}'`)
 	local requiring_dir = ASSERT(
-		fspath.normalize(fspath.parent(file)),
+		path.normalize(path.dirname(file)),
 		`Problem resolving module for path '{file}'; path's parent could not be normalized.`
 	)
 
-	local filename = ASSERT(fspath.last(file), `Problem getting module for path '{file}'; No filename??`)
+	local filename = ASSERT(path.basename(file), `Problem getting module for path '{file}'; No filename??`)
 
-	local init_path: string?
+	local init_path: path.pathlike?
 	if (filename == "init.luau") or (filename == "init.lua") then
 		init_path = requiring_dir
 		requiring_dir = ASSERT(
-			fspath.normalize(fspath.parent(requiring_dir)),
+			path.normalize(path.dirname(requiring_dir)),
 			`Problem getting module for path '{file}'; could not normalize init module directory.`
 		)
 	end
@@ -43,7 +43,7 @@ export type Identity = setmetatable<{
 	_directory: string,
 }, typeof(metatable)>
 
-local function resolver_from_path(file: string): Identity
+local function resolver_from_path(file: path.pathlike): Identity
 	ASSERT(filesystem.exists(file), `Problem constructing resolver for path '{file}'; path does not exist.`)
 	ASSERT(filesystem.type(file) == "file", `Problem constructing resolver for path '{file}'; path is not a file.`)
 
@@ -52,21 +52,22 @@ local function resolver_from_path(file: string): Identity
 	local aliases = get_aliases.under_dir(module_path)
 
 	if self_path then
-		aliases.self = self_path
+		aliases.self = path.format(self_path)
 	end
 
 	local self = setmetatable({
 		_aliases = aliases,
-		_directory = module_path,
+		_directory = path.format(module_path),
 	}, metatable)
 
 	return self
 end
 
-function resolver.resolve_path(self: Identity, path: string): string
-	local nav = fspath.from_str(path)
+function resolver.resolve_path(self: Identity, path_to_resolve: path.pathlike): path.pathlike
+	local nav = path.parse(path_to_resolve)
 
-	local path_begins = ASSERT(table.remove(nav, 1), `could not resolve path '{path}' because it is empty`)
+	local path_begins =
+		ASSERT(table.remove(nav.parts, 1), `could not resolve path '{path_to_resolve}' because it is empty`)
 	local alias = string.match(path_begins, ALIAS_PATTERN)
 
 	local resolve_root: string
@@ -82,32 +83,33 @@ function resolver.resolve_path(self: Identity, path: string): string
 
 		resolve_root = alias_target
 	elseif path_begins == ".." then
-		resolve_root = fspath.parent(self._directory)
+		resolve_root = path.dirname(self._directory)
 	elseif path_begins == "." then
 		resolve_root = self._directory
 	else
 		error(`Could not resolve module for '{path}'; paths must begin with either "@<alias>/", "./", or "../"`)
 	end
 
-	local resolve_suffix = fspath.from_nav(nav)
+	local resolve_suffix = path.parse(nav)
 
 	local full_resolve_path = ASSERT(
-		fspath.normalize(fspath.push(resolve_suffix, resolve_root)),
+		path.normalize(path.join(resolve_root, resolve_suffix)),
 		`Could not resolve module for '{path}'; resulting path could not be normalized.`
 	)
 	ASSERT(
-		fspath.absolute_eh(full_resolve_path),
+		path.isabsolute(full_resolve_path),
 		`Could not resolve module for '{path}'; resulting path was not absolute.`
 	)
 
+	-- FIXME: properly set extension
 	local try_list = {
-		fspath.to_str(fspath.push("init.luau", full_resolve_path)),
-		fspath.to_str(fspath.push("init.lua", full_resolve_path)),
-		fspath.to_str(fspath.set_extension(full_resolve_path, "luau")),
-		fspath.to_str(fspath.set_extension(full_resolve_path, "lua")),
+		path.format(path.join(full_resolve_path, "init.luau")),
+		path.format(path.join(full_resolve_path, "init.lua")),
+		path.format(`{path.format(full_resolve_path)}.luau`),
+		path.format(`{path.format(full_resolve_path)}.lua`),
 	}
 
-	local found_file: string
+	local found_file: path.pathlike
 	for _, try in try_list do
 		if not filesystem.exists(try) then
 			continue
@@ -128,7 +130,7 @@ function resolver.resolve_path(self: Identity, path: string): string
 	)
 
 	found_file = ASSERT(
-		fspath.normalize(found_file),
+		path.normalize(found_file),
 		`Could not resolve module for '{path}'; failed to normalize filename {found_file}??`
 	)
 

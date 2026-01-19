@@ -1,17 +1,16 @@
 -- warmluau
 -- darklua but warm and luau
 -- by checkraisefold
-local PROJECT_FILE_EXTENSION = "warm.luau"
 local PROJECT_FILE_MATCH = "^(.*)%.warm%.luau?$"
 
 local cli = require("@batteries/cli")
 local defs = require("@warmluau/")
 local filesystem = require("@std/fs")
-local fspath = require("@util/fspath")
 local luau = require("@lute/luau")
 local meta = require("@lib/meta")
 local options = require("./options")
 local oven = require("@lib/oven")
+local path = require("@std/path")
 local printer = require("@std/syntax/printer")
 local process = require("@lute/process")
 local recipe = require("@lib/oven/recipe")
@@ -35,15 +34,14 @@ if parser:has("version") then
 	return
 end
 
-local project_path = fspath.normalize(parser:get("project") or meta.default_project_name)
+local project_path = path.normalize(parser:get("project") or meta.default_project_name)
 assert(project_path, "failed to normalize project path")
-if not string.match(project_path, PROJECT_FILE_MATCH) then
-	if fspath.extension(project_path) ~= "luau" then
+if not string.match(path.format(project_path), PROJECT_FILE_MATCH) then
+	if path.extname(project_path) ~= ".luau" then
 		error(`project path {styled(project_path)} is not a luau file.`) --
 	end
-	project_path = fspath.set_extension(project_path, PROJECT_FILE_EXTENSION)
 end
-project_path = fspath.to_str(fspath.push(project_path, process.cwd()))
+project_path = path.resolve(project_path)
 
 if not filesystem.exists(project_path) then
 	error(`project file at {styled(project_path)} does not exist.`, 2) --

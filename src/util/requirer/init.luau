@@ -1,9 +1,10 @@
 local PREPEND = [[math.randomseed(0); local require = ...;]]
 
 local filesystem = require("@std/fs")
-local fspath = require("@util/fspath")
 local luau = require("@lute/luau")
 local override = require("@self/override")
+local path = require("@std/path")
+local path_helpers = require("@util/path_helpers")
 local require_resolver = require("@util/require_resolver")
 local styled = require("@util/pretty_print")
 
@@ -19,21 +20,21 @@ local function count_vararg(...: unknown): (unknown, number)
 end
 
 local function try_find_override(
-	path: fspath.ValidPath,
+	file_path: path.pathlike,
 	base: override.Identity,
-	prefix: { string }?
+	prefix: path.pathlike?
 ): override.Identity?
-	prefix = prefix or {}
-	path = fspath.to_nav(path)
+	prefix = prefix or ""
+	file_path = path.parse(file_path)
 
-	local base_path = fspath.push(base.path, prefix)
+	local base_path = path.join(prefix, base.path)
 
-	if fspath.starts_with(path, base_path) and fspath.equal(path, base_path) then
+	if path_helpers.starts_with(file_path, base_path) and path_helpers.equal(file_path, base_path) then
 		return base
 	end
 
 	for _, child in base.children do
-		local found = try_find_override(path, child, base_path)
+		local found = try_find_override(file_path, child, base_path)
 		if found then
 			return found
 		end
@@ -42,7 +43,11 @@ local function try_find_override(
 	return nil
 end
 
-local function require_constructor(requiring_path: string, result_cache: ResultCache?, override: override.Identity?)
+local function require_constructor(
+	requiring_path: path.pathlike,
+	result_cache: ResultCache?,
+	override: override.Identity?
+)
 	local result_cache: ResultCache = result_cache or {}
 	local resolver = require_resolver.from_path(requiring_path)
 
@@ -51,9 +56,9 @@ local function require_constructor(requiring_path: string, result_cache: ResultC
 		if typeof(target) ~= "string" then
 			return (require)(target)
 		end
-		local nav = fspath.to_nav(target)
+		local nav = path.parse(target)
 
-		if override and fspath.starts_with(nav, override.path) then
+		if override and path_helpers.starts_with(nav, override.path) then
 			local found = try_find_override(nav, override)
 			if not found then
 				print(`Could not resolve overrided path for {styled(found)}.`)
@@ -64,7 +69,7 @@ local function require_constructor(requiring_path: string, result_cache: ResultC
 			return (require)(target)
 		end
 
-		local resolved_path = resolver:resolve_path(target)
+		local resolved_path = path.format(resolver:resolve_path(target))
 
 		do
 			local cached = result_cache[resolved_path]

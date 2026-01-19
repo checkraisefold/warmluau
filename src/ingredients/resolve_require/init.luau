@@ -5,9 +5,9 @@ local chef = require("@util/syntax/chef")
 local convert_require = require("@warmluau/ingredients/resolve_require")
 local defs = require("@warmluau/")
 local filesystem = require("@std/fs")
-local fspath = require("@util/fspath")
 local json = require("@batteries/json")
 local luau = require("@lute/luau")
+local path = require("@std/path")
 local process = require("@lute/process")
 local require_resolver = require("@util/require_resolver")
 local sourcemap = require("@util/sourcemap")
@@ -35,11 +35,11 @@ local function sanitized(str: string): string
 end
 
 local function rojo_sourcemap_indices(
-	sourcemap_parent: fspath.ValidPath,
+	sourcemap_parent: path.pathlike,
 	rojo_sourcemap: sourcemap.Node,
 	indexing_style: IndexingStyle
 ): { [string]: string }
-	sourcemap_parent = fspath.to_nav(sourcemap_parent)
+	sourcemap_parent = path.parse(sourcemap_parent)
 
 	local indices: { [string]: string } = {}
 
@@ -66,10 +66,10 @@ local function rojo_sourcemap_indices(
 			for file_paths_index = 1, file_paths_count do
 				local file_path = file_paths[file_paths_index]
 				local absolute_path = ASSERT(
-					fspath.normalize(fspath.push(file_path, sourcemap_parent)),
+					path.normalize(path.join(sourcemap_parent, file_path)),
 					`couldn't normalize path {styled(file_path)} from sourcemap`
 				)
-				indices[absolute_path] = node_name
+				indices[path.format(absolute_path)] = node_name
 			end
 		end
 		local children = node.children
@@ -97,11 +97,11 @@ local function rojo_sourcemap_indices(
 end
 
 local function prepare(opts: Opts): defs.PreparedIngredient<Opts>
-	local sourcemap_path = fspath.to_str(fspath.push(opts.sourcemap_path, process.cwd()))
+	local sourcemap_path = path.format(path.join(process.cwd(), opts.sourcemap_path))
 	ASSERT(filesystem.exists(sourcemap_path), `sourcemap at {styled(sourcemap_path)} doesn't exist`)
 	ASSERT(filesystem.type(sourcemap_path) == "file", `sourcemap at {styled(sourcemap_path)} is not a file`)
 	local sourcemap_parent_path =
-		ASSERT(fspath.normalize(fspath.parent(sourcemap_path)), `sourcemap's parent could not be normalized.`)
+		ASSERT(path.normalize(path.join(sourcemap_path, "../")), `sourcemap's parent could not be normalized.`)
 
 	local sourcemap_contents = filesystem.readfiletostring(sourcemap_path)
 	local deserialized_sourcemap = json.deserialize(sourcemap_contents)
@@ -129,7 +129,7 @@ local function prepare(opts: Opts): defs.PreparedIngredient<Opts>
 		local state = resolving_visitor.state
 		local resolved = state.resolver:resolve_path(call_expr.text)
 
-		local roblox_target = indices[resolved]
+		local roblox_target = indices[path.format(resolved)]
 		if roblox_target then
 			call_expr = luau.parseexpr(roblox_target)
 			arg.node = call_expr

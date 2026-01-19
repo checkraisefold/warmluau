@@ -1,6 +1,7 @@
 local filesystem = require("@std/fs")
-local fspath = require("@util/fspath")
 local json = require("@batteries/json")
+local path = require("@std/path")
+local path_helpers = require("@util/path_helpers")
 local process = require("@lute/process")
 local resolver_types = require("./types")
 local styled = require("@util/pretty_print")
@@ -14,12 +15,12 @@ local function ASSERT<Value>(value: Value, message: string?)
 	error(message or "Assertion Failed!", 2)
 end
 
-local homedir_nav = fspath.to_nav(process.homedir())
+local homedir_nav = path.parse(process.homedir())
 
 local cache: { [unknown]: RequireAliases } = {}
-local function aliases_under_dir(module_directory: string): RequireAliases
+local function aliases_under_dir(module_directory: path.pathlike): RequireAliases
 	local normalized_file_directory =
-		ASSERT(fspath.normalize(module_directory), `could not normalize luaurc directory {styled(module_directory)}`)
+		ASSERT(path.resolve(module_directory), `could not resolve luaurc directory {styled(module_directory)}`)
 	do
 		local cached = cache[normalized_file_directory]
 		if cached then
@@ -31,15 +32,14 @@ local function aliases_under_dir(module_directory: string): RequireAliases
 
 	local parent = normalized_file_directory
 	while parent do
-		if not fspath.absolute_eh(parent) then
+		if (not path.isabsolute(parent)) or (#parent.parts == 0) then
 			break
 		end
 		local luaurc_parent = parent
-		parent = fspath.normalize(fspath.parent(parent))
+		parent = path.normalize(path.dirname(parent))
 
-		local luaurc_path = fspath.push(".luaurc", luaurc_parent)
-
-		local luaurc_path_str = fspath.to_str(luaurc_path)
+		local luaurc_path = path.join(luaurc_parent, ".luaurc")
+		local luaurc_path_str = path.format(luaurc_path)
 
 		local file_eh = filesystem.exists(luaurc_path_str)
 		if not file_eh then
@@ -60,26 +60,25 @@ local function aliases_under_dir(module_directory: string): RequireAliases
 				continue
 			end
 
-			if fspath.starts_with(target, "~") then
-				local output_nav = table.clone(homedir_nav)
-				local cloned_target = fspath.clone_nav(target)
-				table.move(cloned_target, 2, #cloned_target, #homedir_nav + 1, output_nav)
-				target = fspath.to_str(output_nav)
+			if path_helpers.starts_with(target, "~") then
+				local cloned_target = path.parse(target)
+				table.remove(cloned_target.parts, 1)
+				target = path.resolve(path.join(homedir_nav, target))
 			else
 				target = ASSERT(
-					fspath.normalize(fspath.push(target, luaurc_parent)),
+					path.resolve(path.join(luaurc_parent, target)),
 					`normalizing target for alias "{alias}" failed`
 				)
 			end
 
-			if not fspath.absolute_eh(target) then
+			if not path.isabsolute(target) then
 				error(
 					`Problem registering alias "{alias}": "{target}" in luaurc "{luaurc_path}",`
 						.. ` path parent is not absolute.`
 				)
 			end
 
-			all_aliases[alias] = target
+			all_aliases[alias] = path.format(target)
 		end
 	end
 

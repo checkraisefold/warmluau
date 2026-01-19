@@ -1,5 +1,6 @@
 local filesystem = require("@lute/fs")
 local luau = require("@lute/luau")
+local path = require("@std/path")
 
 export type Ast = luau.AstStatBlock
 export type AstExpr = luau.AstExpr
@@ -42,8 +43,8 @@ export type PreparedIngredient<Options = any> = {
 }
 
 export type OvenPreheat = {
-	input: string,
-	output: string,
+	input: path.pathlike,
+	output: path.pathlike,
 	recursive: boolean,
 	should_cache: boolean,
 	project_modified: number?,

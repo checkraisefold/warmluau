@@ -2,47 +2,34 @@ local FAILED_OUTPUT_FILE = "return error('warmluau could not generate an output 
 
 local defs = require("@warmluau/")
 local filesystem = require("@std/fs")
-local fspath = require("@util/fspath")
 local luau = require("@lute/luau")
+local path = require("@std/path")
 local styled = require("@util/pretty_print")
 
 -- why do they call it oven when you of in the cold food of hot eat the food
 
 type Process = index<defs.PreparedIngredient, "process">
 
-local function get_handle(root: fspath.Nav, file: fspath.Nav): filesystem.file?
-	local file_path = fspath.to_str(fspath.push(file, root))
+local function get_handle(root: path.pathlike, file: path.pathlike): filesystem.file?
+	local file_path = path.format(path.join(root, file))
 	if not filesystem.exists(file_path) then
-		local merged = table.clone(root)
-		local merged_count = #merged
-		for file_index = 1, #file - 1 do
-			merged_count += 1
-			merged[merged_count] = file[file_index]
-			local dir_path = fspath.to_str(merged)
-			if not filesystem.exists(dir_path) then
-				local success, err = pcall(filesystem.createdirectory, dir_path, nil)
-				if not success then
-					print(
-						`Could not ensure file {file_path} exists;`
-							.. `mkdir errored while ensuring dir {dir_path}:\n{err}`
-					) --
-					return nil
-				end
-			end
+		local success, err = pcall(filesystem.createdirectory :: any, root, { makeparents = true })
+		if not success then
+			print(`Could not ensure file {file_path} exists; mkdir errored while ensuring dir {root}:\n{err}`)
 		end
 	end
 
 	local success, file_handle = pcall(filesystem.open, file_path, "w+" :: "w+")
 	if not success then
-		print(`Failed to open path {styled(file_path)}, errored while opening handle:\n{file_handle}`) --
+		print(`Failed to open path {styled(file_path)}, errored while opening handle:\n{file_handle}`)
 		return nil
 	end
 
 	return file_handle
 end
 
-local function locate_luau_files(directory_path: string, recurse: boolean): { fspath.Nav }
-	local file_positions: { fspath.Nav } = {}
+local function locate_luau_files(directory_path: path.pathlike, recurse: boolean): { path.pathlike }
+	local file_positions: { path.pathlike } = {}
 	local file_positions_count = 0
 
 	local entries = filesystem.listdirectory(directory_path)
@@ -54,22 +41,22 @@ local function locate_luau_files(directory_path: string, recurse: boolean): { fs
 		local entry = entries[entries_index]
 
 		local entry_name = entry.name
-		local entry_nav = fspath.to_nav(entry_name)
+		local entry_nav = path.parse(entry_name)
 
 		if entry.type ~= "file" then
 			if entry.type == "dir" and recurse then
-				local full_dir = fspath.to_str(fspath.push(entry_nav, directory_path))
+				local full_dir = path.format(path.join(directory_path, entry_nav))
 				local child_entries = filesystem.listdirectory(full_dir)
 				local child_entries_count = #child_entries
 				for child_index = 1, child_entries_count do
 					local child = child_entries[child_index]
-					child.name = fspath.to_str(fspath.push(child.name, entry_nav))
+					child.name = path.format(path.join(entry_nav, child.name))
 				end
 				table.move(child_entries, 1, child_entries_count, entries_count + 1, entries)
 				entries_count += child_entries_count
 			end
 			continue
-		elseif fspath.extension(entry_name) ~= "luau" then
+		elseif path.extname(entry_name) ~= ".luau" then
 			continue
 		end
 
@@ -83,13 +70,10 @@ end
 local function oven_preheat(preheat: defs.OvenPreheat): defs.Oven
 	local parse_failure = luau.parse(FAILED_OUTPUT_FILE)
 
-	local input_dir, output_dir = fspath.normalize(preheat.input), fspath.normalize(preheat.output)
+	local input_dir, output_dir = path.normalize(preheat.input), path.normalize(preheat.output)
 	assert(input_dir, `Oven failed to preheat; input dir {styled(preheat.input)} could not be normalized.`)
 	assert(output_dir, `Oven failed to preheat; output dir {styled(preheat.output)} could not be normalized.`)
 	local should_cache = preheat.should_cache
-
-	local input_nav = fspath.to_nav(input_dir)
-	local output_nav = fspath.to_nav(output_dir)
 
 	--[[
 	TODO: Is this really necessary?
@@ -98,11 +82,11 @@ local function oven_preheat(preheat: defs.OvenPreheat): defs.Oven
 		local output_files = locate_luau_files(output_dir, true)
 		for output_files_index = 1, #output_files do
 			local file_location = output_files[output_files_index]
-			local src_path = fspath.to_str(fspath.push(file_location, output_nav))
+			local src_path = path.format(path.join(output_dir, file_location))
 			if filesystem.exists(src_path) then
 				continue
 			end
-			local dst_path = fspath.to_str(fspath.push(file_location, input_nav))
+			local dst_path = path.format(path.join(input_dir, file_location))
 			if filesystem.exists(dst_path) then
 				filesystem.remove(dst_path)
 			end
@@ -116,9 +100,9 @@ local function oven_preheat(preheat: defs.OvenPreheat): defs.Oven
 	local input_files = locate_luau_files(input_dir, preheat.recursive)
 	for input_files_index = 1, #input_files do
 		local file_location = input_files[input_files_index]
-		local src_path = fspath.to_str(fspath.push(file_location, input_nav))
+		local src_path = path.format(path.join(input_dir, file_location))
 		assert(filesystem.exists(src_path), "path does not exist")
-		local dst_path = fspath.to_str(fspath.push(file_location, output_nav))
+		local dst_path = path.format(path.join(output_dir, file_location))
 		if should_cache then
 			local src_modified = filesystem.metadata(src_path).modified
 			if project_modified and project_modified > src_modified then
@@ -132,7 +116,7 @@ local function oven_preheat(preheat: defs.OvenPreheat): defs.Oven
 			end
 		end
 
-		local dst_handle = get_handle(output_nav, file_location)
+		local dst_handle = get_handle(output_dir, file_location)
 
 		if not dst_handle then
 			continue
