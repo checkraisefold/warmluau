@@ -108,13 +108,13 @@ local function oven_preheat(preheat: defs.OvenPreheat): defs.Oven
 		assert(filesystem.exists(src_path), "path does not exist")
 		local dst_path = path.format(path.join(output_dir, file_location))
 		if should_cache then
-			local src_modified = filesystem.metadata(src_path).modified
+			local src_modified = filesystem.metadata(src_path).modified:toseconds()
 			if project_modified and project_modified > src_modified then
 				src_modified = project_modified --
 			end
 			local cached_eh = --
 				filesystem.exists(dst_path) --
-				and (src_modified < filesystem.metadata(dst_path).modified)
+				and (src_modified < filesystem.metadata(dst_path).modified:toseconds())
 			if cached_eh then
 				continue
 			end
