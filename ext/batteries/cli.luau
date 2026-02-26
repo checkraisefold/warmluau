@@ -41,7 +41,7 @@ function cli.parser(): Parser
 end
 
 function cli.add(self: Parser, name: string, kind: ArgKind, options: ArgOptions): ()
-	local argument = {
+	local argument: ArgData = {
 		name = name,
 		kind = kind,
 		options = options or { aliases = {}, required = false },
@@ -151,7 +151,7 @@ function cli.parse(self: Parser, args: { string }): ()
 	end
 end
 
-function cli.get(self: Parser, name: string): string
+function cli.get(self: Parser, name: string): string?
 	return self.parsed.values[name]
 end
 
