@@ -10,6 +10,13 @@ end
 
 local value_visitor = chef.create() :: chef.Identity<VisitorState>
 
+local zerospan: luau.span = luau.span.create({
+	begincolumn = 0,
+	beginline = 0,
+	endcolumn = 0,
+	endline = 0,
+})
+
 local function try_eval(expression: luau.AstExpr): luau.AstExpr?
 	local evaluated = value_visitor.state(expression)
 	if not evaluated then
@@ -108,7 +115,7 @@ function value_visitor.visitStatFor(node: luau.AstStatFor)
 	return false
 end
 
-function value_visitor.vfor_in(node)
+function value_visitor.visitStatForIn(node: luau.AstStatForIn)
 	chef.inner_visit_token(node.forkeyword)
 	chef.inner_visit_punctuated(node.variables, chef.inner_visit_local)
 	chef.inner_visit_token(node.inkeyword)
@@ -123,7 +130,7 @@ function value_visitor.vfor_in(node)
 	return false
 end
 
-function value_visitor.vassign(node)
+function value_visitor.visitStatAssign(node: luau.AstStatAssign)
 	chef.inner_visit_punctuated(node.variables, chef.inner_visit_expression)
 	for _, value in node.values do
 		local evaluated = try_eval(value.node)
@@ -134,7 +141,7 @@ function value_visitor.vassign(node)
 	return false
 end
 
-function value_visitor.vcompound_assign(node)
+function value_visitor.visitStatCompoundAssign(node: luau.AstStatCompoundAssign)
 	chef.inner_visit_expression(node.variable)
 	local evaluated = try_eval(node.value)
 	if evaluated then
@@ -143,7 +150,7 @@ function value_visitor.vcompound_assign(node)
 	return false
 end
 
-function value_visitor.vcall(node)
+function value_visitor.visitExprCall(node: luau.AstExprCall)
 	chef.inner_visit_expression(node.func)
 	for _, argument_pair in node.arguments do
 		local evaluated = try_eval(argument_pair.node)
@@ -178,7 +185,7 @@ function value_visitor.vbinary(node)
 	return false
 end
 
-function value_visitor.vtable_item(node)
+function value_visitor.visitTableExprItem(node: luau.AstTableExprItem)
 	if node.kind == "list" then
 		local evaluated = try_eval(node.value)
 		if evaluated then
@@ -208,28 +215,26 @@ function value_visitor.vtable_item(node)
 	return false
 end
 
-function value_visitor.vindex_name(node)
+function value_visitor.visitExprIndexName(node: luau.AstExprIndexName)
 	do
 		local evaluated = try_eval(node.expression)
 		if evaluated then
 			local group: luau.AstExprGroup = {
+				kind = "expr",
 				tag = "group",
+				location = zerospan,
 				openparens = {
+					istoken = true,
 					leadingtrivia = {},
-					position = {
-						column = 0,
-						line = 0,
-					},
+					location = zerospan,
 					text = "(",
 					trailingtrivia = {},
 				},
 				expression = evaluated,
 				closeparens = {
+					istoken = true,
 					leadingtrivia = {},
-					position = {
-						column = 0,
-						line = 0,
-					},
+					location = zerospan,
 					text = ")",
 					trailingtrivia = {},
 				},
@@ -240,7 +245,8 @@ function value_visitor.vindex_name(node)
 	return false
 end
 
-function value_visitor.vinterpolated_string(node)
+
+function value_visitor.visitExprInterpString(node: luau.AstExprInterpString)
 	for i = 1, #node.strings do
 		local expressions = node.expressions
 		if i <= #expressions then
@@ -253,7 +259,7 @@ function value_visitor.vinterpolated_string(node)
 	return false
 end
 
-function value_visitor.vif_expression(node)
+function value_visitor.visitExprIfElse(node: luau.AstExprIfElse)
 	do
 		local evaluated = try_eval(node.condition)
 		if evaluated then
@@ -289,7 +295,7 @@ function value_visitor.vif_expression(node)
 	return false
 end
 
-function value_visitor.type_vtypeof(node)
+function value_visitor.visitTypeTypeof(node: luau.AstTypeTypeof)
 	local evaluated = try_eval(node.expression)
 	if evaluated then
 		node.expression = evaluated
@@ -298,7 +304,7 @@ function value_visitor.type_vtypeof(node)
 end
 
 local function process_values(ast: luau.AstStatBlock, with: Processor): ()
-	value_visitor:visit_ast_block(ast, with)
+	value_visitor.visitStatBlock(ast, with)
 end
 
 return {
