@@ -144,7 +144,7 @@ local function prepare(opts: Opts): defs.PreparedIngredient<Opts>
 			arg.node = call_expr
 		else
 			print(
-				`Could not resolve roblox path for "{call_expr.text}" \z
+				`Could not resolve sourcemap path for "{call_expr.text}" \z
 				at {state.path}:{func.name.location.beginline}:\n\z
 				\tresolved path: {path.format(resolved)}`
 			)
