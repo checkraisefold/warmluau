@@ -2,10 +2,10 @@ local REQUIRE_GLOBAL = "require"
 local DEFAULT_INDEXING_STYLE: IndexingStyle = "property"
 
 local chef = require("@util/syntax/chef")
-local convert_require = require("@warmluau/ingredients/resolve_require")
+local resolve_require = require("@warmluau/ingredients/resolve_require")
 local defs = require("@warmluau/")
 local filesystem = require("@std/fs")
-local json = require("@batteries/json")
+local json = require("@std/json")
 local luau = require("@lute/luau")
 local path = require("@std/path")
 local process = require("@lute/process")
@@ -13,8 +13,8 @@ local require_resolver = require("@util/require_resolver")
 local sourcemap = require("@util/sourcemap")
 local styled = require("@util/pretty_print")
 
-type Opts = convert_require.Opts
-type IndexingStyle = convert_require.IndexingStyle
+type Opts = resolve_require.Opts
+type IndexingStyle = resolve_require.IndexingStyle
 
 type VisitorState = {
 	path: string,
