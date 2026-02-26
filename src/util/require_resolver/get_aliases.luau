@@ -1,5 +1,5 @@
 local filesystem = require("@std/fs")
-local json = require("@batteries/json")
+local json = require("@std/json")
 local path = require("@std/path")
 local path_helpers = require("@util/path_helpers")
 local process = require("@lute/process")
@@ -56,6 +56,10 @@ local function aliases_under_dir(module_directory: path.pathlike): RequireAliase
 		end
 
 		for alias, target in luaurc_aliases do
+			-- what the fuck, json deserializer?
+			if type(alias) ~= "string" then
+				continue
+			end
 			if all_aliases[alias] ~= nil then
 				continue
 			end
