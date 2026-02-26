@@ -17,6 +17,18 @@ local zerospan: luau.span = luau.span.create({
 	endline = 0,
 })
 
+local function visitPunctuated<T, Separator>(
+	list: luau.Punctuated<T, Separator>,
+	apply: (T, chef.Identity<any>) -> ()
+): ()
+	for _, item in list do
+		apply(item.node, value_visitor)
+		if item.separator then
+			value_visitor.visitToken(item.separator)
+		end
+	end
+end
+
 local function try_eval(expression: luau.AstExpr): luau.AstExpr?
 	local evaluated = value_visitor.state(expression)
 	if not evaluated then
@@ -80,8 +92,8 @@ function value_visitor.visitStatReturn(node: luau.AstStatReturn)
 	return false
 end
 
-function value_visitor.visitStatLocalDeclaration(node)
-	chef.inner_visit_punctuated(node.variables, chef.inner_visit_local)
+function value_visitor.visitStatLocalDeclaration(node: luau.AstStatLocal)
+	visitPunctuated(node.variables, chef.visit)
 	for _, value in node.values do
 		local evaluated = try_eval(value.node)
 		if evaluated then
@@ -92,7 +104,7 @@ function value_visitor.visitStatLocalDeclaration(node)
 end
 
 function value_visitor.visitStatFor(node: luau.AstStatFor)
-	chef.inner_visit_local(node.variable)
+	chef.visit(node.variable, value_visitor)
 	do
 		local evaluated = try_eval(node.from)
 		if evaluated then
@@ -111,27 +123,27 @@ function value_visitor.visitStatFor(node: luau.AstStatFor)
 			node.step = evaluated
 		end
 	end
-	chef.inner_visit_block(node.body)
+	chef.visitblock(node.body, value_visitor)
 	return false
 end
 
 function value_visitor.visitStatForIn(node: luau.AstStatForIn)
-	chef.inner_visit_token(node.forkeyword)
-	chef.inner_visit_punctuated(node.variables, chef.inner_visit_local)
-	chef.inner_visit_token(node.inkeyword)
+	chef.visittoken(node.forkeyword, value_visitor)
+	visitPunctuated(node.variables, chef.visit)
+	chef.visittoken(node.inkeyword, value_visitor)
 	for _, value in node.values do
 		local evaluated = try_eval(value.node)
 		if evaluated then
 			value.node = evaluated
 		end
 	end
-	chef.inner_visit_block(node.body)
-	chef.inner_visit_token(node.endkeyword)
+	chef.visitblock(node.body, value_visitor)
+	chef.visittoken(node.endkeyword, value_visitor)
 	return false
 end
 
 function value_visitor.visitStatAssign(node: luau.AstStatAssign)
-	chef.inner_visit_punctuated(node.variables, chef.inner_visit_expression)
+	visitPunctuated(node.variables, chef.visit)
 	for _, value in node.values do
 		local evaluated = try_eval(value.node)
 		if evaluated then
@@ -142,7 +154,7 @@ function value_visitor.visitStatAssign(node: luau.AstStatAssign)
 end
 
 function value_visitor.visitStatCompoundAssign(node: luau.AstStatCompoundAssign)
-	chef.inner_visit_expression(node.variable)
+	chef.visitexpression(node.variable, value_visitor)
 	local evaluated = try_eval(node.value)
 	if evaluated then
 		node.value = evaluated
@@ -151,7 +163,7 @@ function value_visitor.visitStatCompoundAssign(node: luau.AstStatCompoundAssign)
 end
 
 function value_visitor.visitExprCall(node: luau.AstExprCall)
-	chef.inner_visit_expression(node.func)
+	chef.visitexpression(node.func, value_visitor)
 	for _, argument_pair in node.arguments do
 		local evaluated = try_eval(argument_pair.node)
 		if evaluated then
@@ -161,7 +173,8 @@ function value_visitor.visitExprCall(node: luau.AstExprCall)
 	return false
 end
 
-function value_visitor.vunary(node)
+
+function value_visitor.visitExprUnary(node: luau.AstExprUnary)
 	local evaluated = try_eval(node.operand)
 	if evaluated then
 		node.operand = evaluated
@@ -169,7 +182,7 @@ function value_visitor.vunary(node)
 	return false
 end
 
-function value_visitor.vbinary(node)
+function value_visitor.visitExprBinary(node: luau.AstExprBinary)
 	do
 		local evaluated = try_eval(node.lhsoperand)
 		if evaluated then
@@ -245,7 +258,6 @@ function value_visitor.visitExprIndexName(node: luau.AstExprIndexName)
 	return false
 end
 
-
 function value_visitor.visitExprInterpString(node: luau.AstExprInterpString)
 	for i = 1, #node.strings do
 		local expressions = node.expressions
@@ -267,9 +279,9 @@ function value_visitor.visitExprIfElse(node: luau.AstExprIfElse)
 		end
 	end
 	do
-		local evaluated = try_eval(node.consequent)
+		local evaluated = try_eval(node.thenexpr)
 		if evaluated then
-			node.consequent = evaluated
+			node.thenexpr = evaluated
 		end
 	end
 	for _, elseif_node in node.elseifs do
@@ -280,16 +292,16 @@ function value_visitor.visitExprIfElse(node: luau.AstExprIfElse)
 			end
 		end
 		do
-			local evaluated = try_eval(elseif_node.consequent)
+			local evaluated = try_eval(elseif_node.thenexpr)
 			if evaluated then
-				elseif_node.consequent = evaluated
+				elseif_node.thenexpr = evaluated
 			end
 		end
 	end
 	do
-		local evaluated = try_eval(node.antecedent)
+		local evaluated = try_eval(node.elseexpr)
 		if evaluated then
-			node.antecedent = evaluated
+			node.elseexpr = evaluated
 		end
 	end
 	return false
