@@ -24,7 +24,14 @@ local function resolve_module_path(file: path.pathlike): (path.pathlike, path.pa
 	local filename = ASSERT(path.basename(file), `Problem getting module for path '{file}'; No filename??`)
 
 	local init_path: path.pathlike?
-	if (filename == "init.luau") or (filename == "init.lua") then
+	if
+		(filename == "init.luau")
+		or (filename == "init.client.luau")
+		or (filename == "init.server.luau")
+		or (filename == "init.lua")
+		or (filename == "init.client.lua")
+		or (filename == "init.server.lua")
+	then
 		init_path = requiring_dir
 		requiring_dir = ASSERT(
 			path.normalize(path.dirname(requiring_dir)),
@@ -68,8 +75,10 @@ end
 function resolver.resolve_path(self: Identity, path_to_resolve: path.pathlike): path.pathlike
 	local nav = path.parse(path_to_resolve)
 
-	local path_begins =
-		ASSERT(table.remove(nav.parts, 1), `could not resolve path '{path.format(path_to_resolve)}' because it is empty`)
+	local path_begins = ASSERT(
+		table.remove(nav.parts, 1),
+		`could not resolve path '{path.format(path_to_resolve)}' because it is empty`
+	)
 	local alias = string.match(path_begins, ALIAS_PATTERN)
 
 	local resolve_root: string
@@ -89,7 +98,9 @@ function resolver.resolve_path(self: Identity, path_to_resolve: path.pathlike): 
 	elseif path_begins == "." then
 		resolve_root = self._directory
 	else
-		error(`Could not resolve module for '{path.format(path_to_resolve)}'; paths must begin with either "@<alias>/", "./", or "../"`)
+		error(
+			`Could not resolve module for '{path.format(path_to_resolve)}'; paths must begin with either "@<alias>/", "./", or "../"`
+		)
 	end
 
 	local resolve_suffix = path.parse(nav)
@@ -101,27 +112,31 @@ function resolver.resolve_path(self: Identity, path_to_resolve: path.pathlike): 
 	ASSERT(
 		path.isabsolute(full_resolve_path),
 		`Could not resolve module for '{path.format(path_to_resolve)}'; resulting path was not absolute.\z
-		\nResulting Path: {path.format(full_resolve_path)}`
+		\nResulting Path: {path.format(
+			full_resolve_path
+		)}`
 	)
 
 	local formatted = path.format(full_resolve_path)
 
 	-- TODO: properly set extension
-	local try_list = if self._datamodules then {
-		path.format(path.join(full_resolve_path, "init.luau")),
-		path.format(path.join(full_resolve_path, "init.lua")),
-		path.format(`{formatted}.luau`),
-		path.format(`{formatted}.lua`),
-		path.format(`{formatted}.json`),
-		path.format(`{formatted}.toml`),
-		path.format(`{formatted}.yaml`),
-		path.format(`{formatted}.yml`),
-	} else {
-		path.format(path.join(full_resolve_path, "init.luau")),
-		path.format(path.join(full_resolve_path, "init.lua")),
-		path.format(`{formatted}.luau`),
-		path.format(`{formatted}.lua`)
-	}
+	local try_list = if self._datamodules
+		then {
+			path.format(path.join(full_resolve_path, "init.luau")),
+			path.format(path.join(full_resolve_path, "init.lua")),
+			path.format(`{formatted}.luau`),
+			path.format(`{formatted}.lua`),
+			path.format(`{formatted}.json`),
+			path.format(`{formatted}.toml`),
+			path.format(`{formatted}.yaml`),
+			path.format(`{formatted}.yml`),
+		}
+		else {
+			path.format(path.join(full_resolve_path, "init.luau")),
+			path.format(path.join(full_resolve_path, "init.lua")),
+			path.format(`{formatted}.luau`),
+			path.format(`{formatted}.lua`),
+		}
 
 	local found_file: path.pathlike
 	for _, try in try_list do
