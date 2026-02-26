@@ -6,6 +6,7 @@ export type Opts = {
 	sourcemap_path: string,
 
 	indexing: IndexingStyle?,
+	import_json_yml_toml: boolean?,
 }
 
 return {} :: warmluau.Ingredient<Opts>

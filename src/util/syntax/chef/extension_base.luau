@@ -3,7 +3,7 @@ local types = require("./types")
 
 local extension_base = {}
 
-local function visit_function_body(node: luau.AstFunctionBody, chef: types.Identity)
+local function visit_function_body(node: luau.AstExprFunction, chef: types.Identity)
 	if node.self then
 		table.insert(chef._pending_locals, node.self)
 	end
@@ -15,19 +15,25 @@ end
 local function visit_function_node(
 	self: types.Identity,
 	override: boolean,
-	node: luau.AstNode & { body: luau.AstFunctionBody }
+	node: luau.AstExprFunction
 ): boolean
 	if not override then
 		return override
 	end
 
-	visit_function_body(node.body, self)
+	visit_function_body(node, self)
 	return true
 end
 
-extension_base.visitStatFunction = visit_function_node
-extension_base.visitExprAnonymousFunction = visit_function_node
-extension_base.visitStatTypeFunction = visit_function_node
+function extension_base.visitStatFunction(self: types.Identity, override: boolean, node: luau.AstStatFunction)
+	visit_function_node(self, override, node.func)
+end
+function extension_base.visitExprAnonymousFunction(self: types.Identity, override: boolean, node: luau.AstStatFunction)
+	visit_function_node(self, override, node.func)
+end
+function extension_base.visitStatTypeFunction(self: types.Identity, override: boolean, node: luau.AstStatTypeFunction)
+	visit_function_node(self, override, node.body)
+end
 
 function extension_base.visitStatFor(self: types.Identity, override: boolean, node: luau.AstStatFor): boolean
 	if not override then
@@ -66,7 +72,7 @@ function extension_base.visitStatLocalFunction(
 		return override
 	end
 
-	visit_function_body(node.body, self)
+	visit_function_body(node.func, self)
 	self.ext.visitScopeInsertLocalFunction(node)
 
 	return true

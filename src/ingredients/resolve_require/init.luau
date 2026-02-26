@@ -2,7 +2,6 @@ local REQUIRE_GLOBAL = "require"
 local DEFAULT_INDEXING_STYLE: IndexingStyle = "property"
 
 local chef = require("@util/syntax/chef")
-local resolve_require = require("@warmluau/ingredients/resolve_require")
 local defs = require("@warmluau/")
 local filesystem = require("@std/fs")
 local json = require("@std/json")
@@ -10,6 +9,7 @@ local luau = require("@lute/luau")
 local path = require("@std/path")
 local process = require("@lute/process")
 local require_resolver = require("@util/require_resolver")
+local resolve_require = require("@warmluau/ingredients/resolve_require")
 local sourcemap = require("@util/sourcemap")
 local styled = require("@util/pretty_print")
 
@@ -65,11 +65,16 @@ local function rojo_sourcemap_indices(
 			local file_paths_count = #file_paths
 			for file_paths_index = 1, file_paths_count do
 				local file_path = file_paths[file_paths_index]
-				local absolute_path = ASSERT(
-					path.normalize(path.join(sourcemap_parent, file_path)),
-					`couldn't normalize path {styled(file_path)} from sourcemap`
-				)
-				indices[path.format(absolute_path)] = node_name
+				local absolute_path
+				if path.isabsolute(file_path) then
+					absolute_path = file_path
+				else
+					absolute_path = ASSERT(
+						path.normalize(path.join(sourcemap_parent, file_path)),
+						`couldn't normalize path {styled(file_path)} from sourcemap`
+					)
+				end
+				indices[path.format(path.parse(absolute_path))] = node_name
 			end
 		end
 		local children = node.children
@@ -127,15 +132,21 @@ local function prepare(opts: Opts): defs.PreparedIngredient<Opts>
 			return true
 		end
 		local state = resolving_visitor.state
-		local resolved = state.resolver:resolve_path(call_expr.text)
+		local success, resolved = pcall(state.resolver.resolve_path, state.resolver, call_expr.text)
+		if not success then
+			print(`problem happened while resolving a path:\n{resolved}\n`)
+			return true
+		end
 
-		local roblox_target = indices[path.format(resolved)]
+		local roblox_target = indices[path.format(path.parse(resolved))]
 		if roblox_target then
 			call_expr = luau.parseexpr(roblox_target)
 			arg.node = call_expr
 		else
 			print(
-				`Could not resolve roblox path for "{call_expr.text}" at {state.path}:{func.name.location.beginline}:`
+				`Could not resolve roblox path for "{call_expr.text}" \z
+				at {state.path}:{func.name.location.beginline}:\n\z
+				\tresolved path: {path.format(resolved)}`
 			)
 		end
 
@@ -151,7 +162,7 @@ local function prepare(opts: Opts): defs.PreparedIngredient<Opts>
 		local src_path = oven.cooking_file.src_path
 		chef.visitblockstate(ast, resolving_visitor, {
 			path = src_path,
-			resolver = require_resolver.from_path(src_path),
+			resolver = require_resolver.from_path(src_path, opts.import_json_yml_toml),
 		})
 	end
 

@@ -41,15 +41,16 @@ local metatable = { __index = resolver }
 export type Identity = setmetatable<{
 	_aliases: RequireAliases,
 	_directory: string,
+	_datamodules: boolean,
 }, typeof(metatable)>
 
-local function resolver_from_path(file: path.pathlike): Identity
+local function resolver_from_path(file: path.pathlike, data_modules: boolean?): Identity
 	ASSERT(filesystem.exists(file), `Problem constructing resolver for path '{file}'; path does not exist.`)
 	ASSERT(filesystem.type(file) == "file", `Problem constructing resolver for path '{file}'; path is not a file.`)
 
 	local module_path, self_path = resolve_module_path(file)
 
-	local aliases = get_aliases.under_dir(module_path)
+	local aliases = table.clone(get_aliases.under_dir(module_path))
 
 	if self_path then
 		aliases.self = path.format(self_path)
@@ -58,6 +59,7 @@ local function resolver_from_path(file: path.pathlike): Identity
 	local self = setmetatable({
 		_aliases = aliases,
 		_directory = path.format(module_path),
+		_datamodules = if data_modules ~= nil then data_modules else true,
 	}, metatable)
 
 	return self
@@ -67,7 +69,7 @@ function resolver.resolve_path(self: Identity, path_to_resolve: path.pathlike): 
 	local nav = path.parse(path_to_resolve)
 
 	local path_begins =
-		ASSERT(table.remove(nav.parts, 1), `could not resolve path '{path_to_resolve}' because it is empty`)
+		ASSERT(table.remove(nav.parts, 1), `could not resolve path '{path.format(path_to_resolve)}' because it is empty`)
 	local alias = string.match(path_begins, ALIAS_PATTERN)
 
 	local resolve_root: string
@@ -78,7 +80,7 @@ function resolver.resolve_path(self: Identity, path_to_resolve: path.pathlike): 
 		local alias_target: string? = aliases[alias]
 
 		if alias_target == nil then
-			error(`Could not resolve module for '{path}'; could not find alias "{alias}".`) --
+			error(`Could not resolve module for '{path.format(path_to_resolve)}'; could not find alias "{alias}".`) --
 		end
 
 		resolve_root = alias_target
@@ -87,26 +89,38 @@ function resolver.resolve_path(self: Identity, path_to_resolve: path.pathlike): 
 	elseif path_begins == "." then
 		resolve_root = self._directory
 	else
-		error(`Could not resolve module for '{path}'; paths must begin with either "@<alias>/", "./", or "../"`)
+		error(`Could not resolve module for '{path.format(path_to_resolve)}'; paths must begin with either "@<alias>/", "./", or "../"`)
 	end
 
 	local resolve_suffix = path.parse(nav)
 
 	local full_resolve_path = ASSERT(
 		path.normalize(path.join(resolve_root, resolve_suffix)),
-		`Could not resolve module for '{path}'; resulting path could not be normalized.`
+		`Could not resolve module for '{path.format(path_to_resolve)}'; resulting path could not be normalized.`
 	)
 	ASSERT(
 		path.isabsolute(full_resolve_path),
-		`Could not resolve module for '{path}'; resulting path was not absolute.`
+		`Could not resolve module for '{path.format(path_to_resolve)}'; resulting path was not absolute.\z
+		\nResulting Path: {path.format(full_resolve_path)}`
 	)
 
-	-- FIXME: properly set extension
-	local try_list = {
+	local formatted = path.format(full_resolve_path)
+
+	-- TODO: properly set extension
+	local try_list = if self._datamodules then {
 		path.format(path.join(full_resolve_path, "init.luau")),
 		path.format(path.join(full_resolve_path, "init.lua")),
-		path.format(`{path.format(full_resolve_path)}.luau`),
-		path.format(`{path.format(full_resolve_path)}.lua`),
+		path.format(`{formatted}.luau`),
+		path.format(`{formatted}.lua`),
+		path.format(`{formatted}.json`),
+		path.format(`{formatted}.toml`),
+		path.format(`{formatted}.yaml`),
+		path.format(`{formatted}.yml`),
+	} else {
+		path.format(path.join(full_resolve_path, "init.luau")),
+		path.format(path.join(full_resolve_path, "init.lua")),
+		path.format(`{formatted}.luau`),
+		path.format(`{formatted}.lua`)
 	}
 
 	local found_file: path.pathlike
@@ -118,20 +132,20 @@ function resolver.resolve_path(self: Identity, path_to_resolve: path.pathlike): 
 		end
 		ASSERT(
 			not found_file,
-			`Could not resolve module for '{path}'; found ambiguous filepaths: '{found_file}' and '{try}'`
+			`Could not resolve module for '{path.format(path_to_resolve)}'; found ambiguous filepaths: '{found_file}' and '{try}'`
 		)
 		found_file = try
 	end
 
 	ASSERT(
 		found_file,
-		`Could not resolve module for '{path}'; could not find a matching path.`
+		`Could not resolve module for '{path.format(path_to_resolve)}'; could not find a matching path.`
 			.. ` Tried:\n{table.concat(try_list, ",\n")}`
 	)
 
 	found_file = ASSERT(
 		path.normalize(found_file),
-		`Could not resolve module for '{path}'; failed to normalize filename {found_file}??`
+		`Could not resolve module for '{path.format(path_to_resolve)}'; failed to normalize filename {found_file}??`
 	)
 
 	return found_file

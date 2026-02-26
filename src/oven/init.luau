@@ -3,6 +3,7 @@ local FAILED_OUTPUT_FILE = "return error('warmluau could not generate an output 
 local defs = require("@warmluau/")
 local filesystem = require("@std/fs")
 local luau = require("@lute/luau")
+local process = require("@lute/process")
 local path = require("@std/path")
 local styled = require("@util/pretty_print")
 
@@ -74,6 +75,9 @@ local function oven_preheat(preheat: defs.OvenPreheat): defs.Oven
 	assert(input_dir, `Oven failed to preheat; input dir {styled(preheat.input)} could not be normalized.`)
 	assert(output_dir, `Oven failed to preheat; output dir {styled(preheat.output)} could not be normalized.`)
 	local should_cache = preheat.should_cache
+	
+	input_dir = path.join(process.cwd(), input_dir)
+	output_dir = path.join(process.cwd(), output_dir)
 
 	--[[
 	TODO: Is this really necessary?
