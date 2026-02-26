@@ -316,7 +316,7 @@ function value_visitor.visitTypeTypeof(node: luau.AstTypeTypeof)
 end
 
 local function process_values(ast: luau.AstStatBlock, with: Processor): ()
-	value_visitor.visitStatBlock(ast, with)
+	chef.visitblockstate(ast, value_visitor, with)
 end
 
 return {
