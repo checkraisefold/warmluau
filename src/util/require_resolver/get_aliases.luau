@@ -67,7 +67,7 @@ local function aliases_under_dir(module_directory: path.pathlike): RequireAliase
 			if path_helpers.starts_with(target, "~") then
 				local cloned_target = path.parse(target)
 				table.remove(cloned_target.parts, 1)
-				target = path.resolve(path.join(homedir_nav, target))
+				target = path.resolve(path.join(homedir_nav, cloned_target))
 			else
 				target = ASSERT(
 					path.resolve(path.join(luaurc_parent, target)),
