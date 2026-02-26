@@ -66,7 +66,7 @@ else
 	end
 
 	preheated = oven.preheat({
-		project_modified = project_modified:toseconds(),
+		project_modified = project_modified,
 		recursive = parser:has("recursive"),
 		should_cache = parser:has("cached"),
 		input = input_dir,
