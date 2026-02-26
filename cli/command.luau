@@ -57,10 +57,10 @@ if not parser:has("bake") then
 	print("Not preheating.")
 else
 	print("Preheating...")
-	local input_dir = parser:get("input")
-	local input_exists = input_dir and filesystem.exists(input_dir)
-	assert(input_exists, `bake requires an input dir that exists, got {styled(input_dir)}`)
-	local output_dir = parser:get("output")
+	local input_dir = parser:get(`input`)
+	assert(input_dir and filesystem.exists(input_dir), `bake requires an input dir that exists, got {styled(input_dir)}`)
+	local output_dir = parser:get(`output`)
+	assert(output_dir, `bake requires an output dir, got nothing`)
 	if not filesystem.exists(output_dir) then
 		filesystem.createdirectory(output_dir)
 	end
