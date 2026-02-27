@@ -21,6 +21,7 @@ return dst("@warmluau", IMPL :: typeof(defs), {
 			append_comment = require("@lib/ingredients/append_comment"),
 			resolve_require = require("@lib/ingredients/resolve_require"),
 			resolve_constant = require("@lib/ingredients/resolve_constant"),
+			rename_variables = require("@lib/ingredients/rename_variables"),
 		})
 	),
 	syntax = dst(
