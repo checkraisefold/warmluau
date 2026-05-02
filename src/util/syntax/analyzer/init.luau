@@ -138,10 +138,12 @@ function analyzer.unary(
 		return cunknown()
 	end
 	if operator == "not" then
-		return cbool(truthy_eh(operand))
+		return cbool(not truthy_eh(operand))
 	elseif operator == "-" then
 		if operand.kind == "number" then
-			return cnumber(operand.data)
+			return cnumber(-operand.data)
+		elseif operand.kind == "vector" then
+			return cvector(-operand.data)
 		end
 	elseif operator == "#" then
 		if operand.kind == "string" then
@@ -258,9 +260,9 @@ function analyzer.binary(
 		end
 	elseif operator == ">" then
 		if (lhs_operand.kind == "number") and (rhs_operand.kind == "number") then
-			return cbool(lhs_operand.data < rhs_operand.data)
+			return cbool(lhs_operand.data > rhs_operand.data)
 		elseif (lhs_operand.kind == "string") and (rhs_operand.kind == "string") then
-			return cbool(lhs_operand.data < rhs_operand.data)
+			return cbool(lhs_operand.data > rhs_operand.data)
 		end
 	elseif operator == "and" then
 		if truthy_eh(lhs_operand) then
